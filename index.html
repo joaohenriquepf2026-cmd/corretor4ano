@@ -1,0 +1,2177 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Avaliação Escolar — 4° Ano | Simulados de 30 e 44 Questões</title>
+<meta name="description" content="Correção de simulados de 30 ou 44 questões do 4° ano: gabarito com descritores, importação de planilha, dashboards, rankings por turma, gabarito visual, PCD e análise por descritores." />
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+* , *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5fb; color: #1e2a3b; min-height: 100vh; }
+.legacy-app {
+      --primary: #1a56db;
+      --primary-dark: #1239a5;
+      --secondary: #7e3af2;
+      --success: #0ea472;
+      --danger: #e02424;
+      --warning: #e07b00;
+      --bg: #f1f5fb;
+      --surface: #ffffff;
+      --border: #dde3ef;
+      --text: #1e2a3b;
+      --muted: #6b7a99;
+      --port-blue: #0284c7;
+      --port-bg: #e0f2fe;
+      --math-purple: #7c3aed;
+      --math-bg: #ede9fe;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* HEADER */
+    header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      color: #fff; padding: 1rem 2rem;
+      display: flex; align-items: center; justify-content: space-between;
+      box-shadow: 0 2px 12px rgba(0,0,0,.2);
+      position: sticky; top: 0; z-index: 100;
+    }
+    header h1 { font-size: 1.2rem; font-weight: 700; }
+    .fb-badge { background: rgba(255,255,255,.2); border-radius: 999px; padding: .22rem .8rem; font-size: .75rem; font-weight: 600; }
+
+    /* NAV */
+    nav { background: var(--surface); border-bottom: 1px solid var(--border); display: flex; overflow-x: auto; padding: 0 1.25rem; }
+    nav button { background: none; border: none; padding: .8rem 1.2rem; font-size: .86rem; font-weight: 600; color: var(--muted); cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap; transition: all .15s; }
+    nav button:hover { color: var(--primary); }
+    nav button.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+    /* MAIN */
+    main { max-width: 1180px; margin: 0 auto; padding: 1.75rem 1.25rem; }
+    .section { display: none; }
+    .section.active { display: block; }
+
+    /* CARD */
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.4rem; margin-bottom: 1.25rem; box-shadow: 0 1px 4px rgba(0,0,0,.04); }
+    .card h2 { font-size: 1rem; font-weight: 700; margin-bottom: 1rem; }
+    .card-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+    .card-title h2 { margin: 0; }
+
+    /* GRIDS */
+    .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+    .g3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+    .g4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+    @media(max-width:760px) { .g2,.g3,.g4 { grid-template-columns: 1fr; } }
+
+    /* STAT */
+    .stat { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 1.1rem; text-align: center; }
+    .stat .val { font-size: 1.9rem; font-weight: 800; color: var(--primary); line-height: 1; }
+    .stat .lbl { font-size: .72rem; color: var(--muted); margin-top: .3rem; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; }
+
+    /* FORM */
+    label { display: block; font-size: .82rem; font-weight: 600; margin-bottom: .3rem; }
+    input[type=text], select, textarea { width: 100%; padding: .55rem .8rem; border: 1.5px solid var(--border); border-radius: 8px; font-size: .88rem; color: var(--text); background: #fff; outline: none; transition: border-color .15s; }
+    input[type=text]:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(26,86,219,.1); }
+    .fg { margin-bottom: .9rem; }
+
+    /* BUTTONS */
+    .btn { display: inline-flex; align-items: center; gap: .4rem; padding: .55rem 1.1rem; border-radius: 8px; font-size: .85rem; font-weight: 600; cursor: pointer; border: none; transition: all .15s; }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-success:hover { background: #0a7f59; }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-outline { background: #fff; color: var(--primary); border: 1.5px solid var(--primary); }
+    .btn-outline:hover { background: var(--primary); color: #fff; }
+    .btn-sm { padding: .38rem .8rem; font-size: .78rem; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .btns { display: flex; gap: .6rem; flex-wrap: wrap; }
+
+    /* GABARITO */
+    .area-title { display: flex; align-items: center; gap: .6rem; margin-bottom: .9rem; font-size: .97rem; font-weight: 700; }
+    .pill { font-size: .72rem; padding: .18rem .65rem; border-radius: 999px; font-weight: 600; }
+    .pill-p { background: var(--port-bg); color: var(--port-blue); }
+    .pill-m { background: var(--math-bg); color: var(--math-purple); }
+
+    .qgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(185px, 1fr)); gap: .65rem; }
+    .qcard { border: 1.5px solid var(--border); border-radius: 10px; padding: .7rem; background: #fafbfd; }
+    .qcard.qp { border-left: 4px solid var(--port-blue); }
+    .qcard.qm { border-left: 4px solid var(--math-purple); }
+    .qnum-lbl { font-size: .7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; margin-bottom: .4rem; }
+    .qrow { display: flex; gap: .4rem; align-items: center; }
+    .qrow label { font-size: .7rem; margin: 0; white-space: nowrap; }
+    .qrow select { flex: 1; padding: .32rem .45rem; font-size: .83rem; }
+    .qrow input[type=text] { width: 58px; padding: .32rem .45rem; font-size: .83rem; }
+
+    /* FILE DROP */
+    .drop-zone { border: 2px dashed var(--border); border-radius: 12px; padding: 2.2rem; text-align: center; cursor: pointer; transition: all .2s; }
+    .drop-zone:hover, .drop-zone.over { border-color: var(--primary); background: rgba(26,86,219,.03); }
+    .drop-icon { font-size: 2.3rem; margin-bottom: .65rem; }
+    .drop-zone p { font-size: .88rem; color: var(--muted); }
+    .drop-zone strong { color: var(--primary); }
+
+    /* CLASS SELECTOR */
+    .class-sel { display: flex; gap: .5rem; margin-bottom: 1.2rem; }
+    .class-btn { padding: .45rem 1.2rem; border-radius: 8px; font-size: .86rem; font-weight: 600; cursor: pointer; border: 1.5px solid var(--border); background: #fff; color: var(--muted); transition: all .15s; }
+    .class-btn.a-act { background: var(--port-bg); color: var(--port-blue); border-color: var(--port-blue); }
+    .class-btn.b-act { background: var(--math-bg); color: var(--math-purple); border-color: var(--math-purple); }
+    .class-btn.all-act { background: #f0fdf4; color: #166534; border-color: #4ade80; }
+
+    /* TABLE */
+    .tbl-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; font-size: .81rem; }
+    th { background: #f8fafd; padding: .6rem .9rem; text-align: left; font-weight: 700; color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .4px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    td { padding: .6rem .9rem; border-bottom: 1px solid #f0f2f7; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f8fafd; }
+
+    /* RANK */
+    .rnum { width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: .78rem; }
+    .r1 { background: #fbbf24; color: #78350f; }
+    .r2 { background: #94a3b8; color: #fff; }
+    .r3 { background: #cd7c46; color: #fff; }
+    .rn { background: var(--bg); color: var(--muted); }
+
+    /* PROGRESS */
+    .pg-wrap { background: #eef0f5; border-radius: 999px; height: 7px; width: 100%; }
+    .pg-bar { height: 7px; border-radius: 999px; background: linear-gradient(90deg, var(--success), #34d399); transition: width .4s; }
+    .pg-bar.warn { background: linear-gradient(90deg, var(--warning), #facc15); }
+    .pg-bar.bad  { background: linear-gradient(90deg, var(--danger), #f87171); }
+
+    /* CHARTS */
+    .chart-box { position: relative; height: 270px; }
+    .chart-box-lg { position: relative; height: 320px; }
+
+    /* ALERTS */
+    .alert { padding: .75rem 1rem; border-radius: 9px; font-size: .86rem; font-weight: 500; margin-bottom: .9rem; }
+    .a-info { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+    .a-ok   { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+    .a-warn { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+    .a-err  { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+
+    /* TAGS */
+    .tag { display: inline-block; padding: .18rem .55rem; border-radius: 5px; font-size: .7rem; font-weight: 700; }
+    .tag-a { background: var(--port-bg); color: var(--port-blue); }
+    .tag-b { background: var(--math-bg); color: var(--math-purple); }
+
+    /* MISC */
+    hr.sep { border: none; border-top: 1px solid var(--border); margin: 1.1rem 0; }
+    .tc { text-align: center; }
+    .muted { color: var(--muted); }
+    .sm { font-size: .8rem; }
+    .mt { margin-top: .75rem; }
+    .mt2 { margin-top: 1.1rem; }
+    .flex { display: flex; }
+    .aic { align-items: center; }
+    .jcb { justify-content: space-between; }
+    .gap { gap: .6rem; }
+    .fw { flex-wrap: wrap; }
+
+    .fb-banner { display:none; }
+
+    .import-sel { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; margin-bottom: 1rem; }
+    .import-sel h3 { font-size:.88rem; font-weight:700; margin-bottom:.6rem; }
+    .turma-btns { display:flex; gap:.5rem; }
+    .turma-btn { padding:.45rem 1.4rem; border-radius:8px; border:1.5px solid var(--border); background:#fff; font-size:.85rem; font-weight:600; cursor:pointer; transition:all .15s; color:var(--muted); }
+    .turma-btn.sel-a { background:var(--port-bg); color:var(--port-blue); border-color:var(--port-blue); }
+    .turma-btn.sel-b { background:var(--math-bg); color:var(--math-purple); border-color:var(--math-purple); }
+
+    .spinner { display:inline-block; width:16px; height:16px; border:2.5px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; animation:spin .6s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    .fade { animation: fadeIn .3s ease; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
+
+    /* IMPORT INDICATOR */
+    .import-status { display:flex; gap:1.25rem; flex-wrap:wrap; margin-bottom:1rem; }
+    .import-badge { display:flex; align-items:center; gap:.4rem; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:.45rem .85rem; font-size:.82rem; font-weight:600; }
+    .import-badge .dot { width:8px;height:8px;border-radius:50%; }
+    .dot-ok { background:var(--success); }
+    .dot-no { background:#d1d5db; }
+
+    /* ── RANKING MODERNO ── */
+    .rank-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,.04); }
+    .rank-card-header { display:flex; align-items:center; justify-content:space-between; padding:.85rem 1.1rem; border-bottom:1px solid var(--border); }
+    .rank-card-header h3 { font-size:.95rem; font-weight:800; margin:0; }
+    .sub-nav { display:flex; gap:.4rem; margin-bottom:1.3rem; border-bottom:2px solid var(--border); padding-bottom:.55rem; }
+    .sub-btn { background:none; border:none; padding:.48rem 1.1rem; font-size:.84rem; font-weight:600; color:var(--muted); cursor:pointer; border-radius:8px 8px 0 0; transition:all .15s; white-space:nowrap; }
+    .sub-btn:hover { background:var(--bg); color:var(--text); }
+    .sub-btn.active { background:var(--primary); color:#fff; }
+    .rank-table { width:100%; border-collapse:collapse; }
+    .rank-table tbody tr { transition:background .1s; }
+    .rank-table tbody tr:nth-child(even) { background:#fafbfd; }
+    .rank-table tbody tr:hover { background:#eff4ff; }
+    .rank-table td { padding:.6rem .95rem; border-bottom:1px solid #f0f2f7; vertical-align:middle; }
+    .rank-table tr:last-child td { border-bottom:none; }
+    .rk-pos { width:38px; text-align:center; }
+    .rk-medal { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; font-weight:800; font-size:.78rem; }
+    .medal-1 { background:#fbbf24; color:#78350f; }
+    .medal-2 { background:#94a3b8; color:#fff; }
+    .medal-3 { background:#b87333; color:#fff; }
+    .rk-num { display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; background:var(--bg); color:var(--muted); font-weight:700; font-size:.78rem; }
+    .rk-name { font-weight:700; font-size:.86rem; color:#1e3a8a; background:#93c5fd; padding:.2rem .65rem; border-radius:6px; display:inline-block; }
+    .rk-sub  { font-size:.72rem; color:var(--muted); }
+    .rk-score { width:78px; text-align:center; }
+    .score-pill { display:inline-flex; flex-direction:column; align-items:center; justify-content:center; width:72px; padding:.45rem .3rem; border-radius:10px; font-weight:800; font-size:.95rem; line-height:1.1; }
+    .score-pill small { font-size:.65rem; font-weight:600; opacity:.85; margin-top:.1rem; }
+    .score-adequado     { background:#166534; color:#fff; }
+    .score-intermediario { background:#4ade80; color:#14532d; }
+    .score-critico      { background:#f59e0b; color:#78350f; }
+    .score-muito-critico { background:#dc2626; color:#fff; }
+
+    /* ── GABARITO VISUAL ── */
+    .gab-visual-wrap { overflow-x:auto; border-radius:10px; border:1px solid var(--border); }
+    .gab-table { border-collapse:collapse; font-size:.74rem; white-space:nowrap; width:100%; }
+    .gab-table thead th {
+      background:#1e2a3b; color:#fff; padding:.42rem .35rem;
+      text-align:center; font-weight:700; font-size:.7rem;
+      position:sticky; top:0; z-index:1; border:1px solid #374151;
+    }
+    .gab-table thead th.th-nome {
+      text-align:left; min-width:195px; padding-left:.8rem;
+      position:sticky; left:38px; z-index:2; background:#1e2a3b;
+    }
+    .gab-table thead th.th-nr {
+      position:sticky; left:0; z-index:2; background:#1e2a3b; width:34px;
+    }
+    .gab-table td { padding:.34rem .32rem; text-align:center; border:1px solid #e5e7eb; font-weight:700; }
+    .gab-table td.td-nr   { width:34px; color:var(--muted); font-size:.7rem; position:sticky; left:0; background:#fff; z-index:1; }
+    .gab-table td.td-nome { text-align:left; padding:.34rem .8rem; font-weight:600; color:var(--text); position:sticky; left:34px; background:#fff; border-right:2px solid #d1d5db; min-width:195px; z-index:1; }
+    .gab-table tr:nth-child(even) td.td-nr,
+    .gab-table tr:nth-child(even) td.td-nome { background:#fafbfd; }
+    .gab-table tr:hover td { filter:brightness(.94); }
+    .gc-ok    { background:#16a34a !important; color:#fff !important; }
+    .gc-err   { background:#dc2626 !important; color:#fff !important; }
+    .gc-blank { background:#fff; color:#d1d5db; }
+    .gab-table td.td-total { font-weight:800; color:var(--primary); background:#eff4ff !important; min-width:52px; }
+    .gab-table td.td-sit   { min-width:88px; }
+
+    /* PDF printing */
+    @media print {
+      body * { visibility: hidden; }
+      #pdf-print-area, #pdf-print-area * { visibility: visible; }
+      #pdf-print-area { position:fixed; top:0; left:0; width:100%; background:#fff; padding:20px; }
+    }
+
+/* ═══════ Seletor de simulado ═══════ */
+.mode-switch {
+  background: #0f172a;
+  display: flex; align-items: center; flex-wrap: wrap; gap: .6rem;
+  padding: .85rem 2rem;
+}
+.mode-switch-label {
+  color: #cbd5e1; font-size: .78rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .6px; margin-right: .3rem;
+}
+.mode-btn {
+  background: rgba(255,255,255,.08); color: #e2e8f0;
+  border: 1.5px solid rgba(255,255,255,.18); border-radius: 999px;
+  padding: .5rem 1.15rem; font-size: .8rem; font-weight: 800; letter-spacing: .4px;
+  cursor: pointer; transition: all .15s;
+}
+.mode-btn:hover { background: rgba(255,255,255,.16); }
+.mode-btn.active {
+  background: linear-gradient(135deg, #1a56db 0%, #7e3af2 100%);
+  color: #fff; border-color: transparent;
+  box-shadow: 0 3px 14px rgba(126,58,242,.45);
+}
+@media (max-width: 640px) {
+  .mode-switch { padding: .75rem 1rem; }
+  .mode-btn { flex: 1 1 100%; text-align: center; }
+}
+
+</style>
+</head>
+<body>
+<div class="legacy-app">
+  <div class="mode-switch">
+    <span class="mode-switch-label">Escolha o simulado:</span>
+        <button type="button" class="mode-btn" data-mode="30">SIMULADO DE 30 QUESTÕES</button>
+        <button type="button" class="mode-btn" data-mode="44">SIMULADO DE 44 QUESTÕES</button>
+  </div>
+  <div id="app-root"></div>
+</div>
+
+<script type="text/template" id="legacy-markup"><header>
+  <h1>📊 Avaliação Escolar — 4° Ano A &amp; B</h1>
+  <span class="fb-badge" id="fbStatus" style="display:none"></span>
+</header>
+
+<nav>
+  <button class="active" data-tab="gabarito">📝 Gabarito Oficial</button>
+  <button data-tab="importar">📥 Importar Planilha</button>
+  <button data-tab="dashboard">📈 Dashboard</button>
+  <button data-tab="turmaA">📘 4° Ano A</button>
+  <button data-tab="turmaB">📗 4° Ano B</button>
+  <button data-tab="descritores">📋 Descritores</button>
+</nav>
+
+<main>
+
+<!--
+  ════════════════ FORMATO DA PLANILHA ════════════════
+  Coluna A : Núm. da lista  — Número do aluno (01, 02…)
+  Coluna B : Nome           — Nome completo do aluno
+  Colunas de respostas: Q 1 → Q {{NQ}} — Resposta marcada (A, B, C ou D); em branco se não respondeu.
+  Questões 1–{{PA}} = Português | Questões {{PA1}}–{{NQ}} = Matemática
+-->
+
+<!-- ════════════════ GABARITO ════════════════ -->
+<section id="sec-gabarito" class="section active">
+
+  <div class="card">
+    <div class="card-title">
+      <h2>📝 Gabarito Oficial — {{NQ}} Questões</h2>
+      <div class="btns">
+        <button class="btn btn-outline btn-sm" onclick="loadGabaritoFromStorage()">☁️ Carregar salvo</button>
+        <button class="btn btn-success btn-sm" onclick="saveGabarito()">💾 Salvar Gabarito</button>
+      </div>
+    </div>
+
+    <div class="alert a-info">
+      ℹ️ Informe a <strong>resposta correta (A–D)</strong> e o <strong>código do descritor</strong> de cada questão.
+      Questões <strong>1–{{PA}}</strong> = Português | Questões <strong>{{PA1}}–{{NQ}}</strong> = Matemática.
+    </div>
+
+    <div class="area-title">📖 Português <span class="pill pill-p">Q1 – Q{{PA}}</span></div>
+    <div class="qgrid" id="grid-port"></div>
+
+    <hr class="sep" />
+
+    <div class="area-title">🔢 Matemática <span class="pill pill-m">Q{{PA1}} – Q{{NQ}}</span></div>
+    <div class="qgrid" id="grid-math"></div>
+
+    <hr class="sep" />
+    <div id="gab-msg"></div>
+  </div>
+
+</section>
+
+<!-- ════════════════ IMPORTAR ════════════════ -->
+<section id="sec-importar" class="section">
+
+  <div class="card">
+    <h2>📥 Importar Planilha de Respostas — {{NQ}} Questões</h2>
+    <div class="alert a-info">
+      📄 Formato esperado: <strong>coluna A</strong> = número da lista, <strong>coluna B</strong> = nome do aluno e, em seguida, <strong>{{NQ}} colunas de respostas</strong> (Q1 a Q{{NQ}}) com A, B, C ou D — em branco quando não respondeu.
+      Questões <strong>1–{{PA}}</strong> = Português | Questões <strong>{{PA1}}–{{NQ}}</strong> = Matemática.
+    </div>
+
+    <!-- Status das turmas importadas -->
+    <div class="import-status">
+      <div class="import-badge">
+        <div class="dot" id="dot-a"></div>
+        <span>4° Ano A: <strong id="cnt-a">não importado</strong></span>
+        <button class="btn btn-sm btn-danger" id="clear-a" onclick="clearTurma('A')" style="display:none">✕</button>
+      </div>
+      <div class="import-badge">
+        <div class="dot" id="dot-b"></div>
+        <span>4° Ano B: <strong id="cnt-b">não importado</strong></span>
+        <button class="btn btn-sm btn-danger" id="clear-b" onclick="clearTurma('B')" style="display:none">✕</button>
+      </div>
+    </div>
+
+    <div class="alert a-warn">
+      ⚠️ Salve o <strong>Gabarito Oficial</strong> antes de importar. Para importar as duas turmas, importe uma planilha por vez selecionando a turma correspondente.
+    </div>
+
+    <!-- Seleção de turma -->
+    <div class="import-sel">
+      <h3>📌 A planilha que será importada é de qual turma?</h3>
+      <div class="turma-btns">
+        <button class="turma-btn" id="tb-A" onclick="selectTurmaImport('A')">📘 4° Ano A</button>
+        <button class="turma-btn" id="tb-B" onclick="selectTurmaImport('B')">📗 4° Ano B</button>
+      </div>
+    </div>
+
+    <div class="drop-zone" id="fileDrop" onclick="document.getElementById('fileInput').click()">
+      <div class="drop-icon">📊</div>
+      <p>Clique ou arraste a planilha aqui</p>
+      <p><strong>Formatos: .xls, .xlsx</strong></p>
+    </div>
+    <input type="file" id="fileInput" accept=".xls,.xlsx" style="display:none" onchange="handleFile(this)" />
+
+    <div id="import-preview" class="mt2"></div>
+    <div id="import-msg" class="mt"></div>
+  </div>
+
+</section>
+
+<!-- ════════════════ DASHBOARD ════════════════ -->
+<section id="sec-dashboard" class="section">
+
+  <div id="dash-empty" class="card tc" style="display:none">
+    <p class="muted" style="padding:2rem;font-size:1rem">📭 Importe pelo menos uma planilha para ver o dashboard.</p>
+  </div>
+
+  <div id="dash-content" style="display:none">
+
+    <!-- Gráfico comparativo — largura total -->
+    <div class="card" style="margin-bottom:1.25rem">
+      <h2>⚖️ Comparativo 4°A vs 4°B por Área</h2>
+      <div class="chart-box"><canvas id="cComp"></canvas></div>
+    </div>
+
+    <!-- Duas colunas: A | B -->
+    <div class="g2">
+
+      <!-- ── 4° Ano A ── -->
+      <div>
+        <div style="font-size:1rem;font-weight:800;color:var(--port-blue);margin-bottom:.85rem">📘 4° Ano A</div>
+        <div class="g2" style="margin-bottom:1rem">
+          <div class="stat"><div class="val" id="dk-a-alunos">–</div><div class="lbl">Alunos</div></div>
+          <div class="stat"><div class="val" id="dk-a-geral">–</div><div class="lbl">Média Geral</div></div>
+          <div class="stat"><div class="val" id="dk-a-port">–</div><div class="lbl">Média Port.</div></div>
+          <div class="stat"><div class="val" id="dk-a-math">–</div><div class="lbl">Média Mat.</div></div>
+        </div>
+        <div class="card"><h2>📊 Distribuição de Acertos</h2><div class="chart-box"><canvas id="cDistA"></canvas></div></div>
+        <div class="card"><h2>📚 Português vs Matemática</h2><div class="chart-box"><canvas id="cAreaA"></canvas></div></div>
+        <div class="card"><h2>❓ % Acerto por Questão</h2><div class="chart-box"><canvas id="cQuestA"></canvas></div></div>
+      </div>
+
+      <!-- ── 4° Ano B ── -->
+      <div>
+        <div style="font-size:1rem;font-weight:800;color:var(--math-purple);margin-bottom:.85rem">📗 4° Ano B</div>
+        <div class="g2" style="margin-bottom:1rem">
+          <div class="stat"><div class="val" id="dk-b-alunos">–</div><div class="lbl">Alunos</div></div>
+          <div class="stat"><div class="val" id="dk-b-geral">–</div><div class="lbl">Média Geral</div></div>
+          <div class="stat"><div class="val" id="dk-b-port">–</div><div class="lbl">Média Port.</div></div>
+          <div class="stat"><div class="val" id="dk-b-math">–</div><div class="lbl">Média Mat.</div></div>
+        </div>
+        <div class="card"><h2>📊 Distribuição de Acertos</h2><div class="chart-box"><canvas id="cDistB"></canvas></div></div>
+        <div class="card"><h2>📚 Português vs Matemática</h2><div class="chart-box"><canvas id="cAreaB"></canvas></div></div>
+        <div class="card"><h2>❓ % Acerto por Questão</h2><div class="chart-box"><canvas id="cQuestB"></canvas></div></div>
+      </div>
+
+    </div>
+  </div>
+
+</section>
+
+<!-- ════════════════ TURMA A ════════════════ -->
+<section id="sec-turmaA" class="section">
+
+  <div id="empty-turmaA" class="card tc" style="display:none">
+    <p class="muted" style="padding:2rem;font-size:1rem">📭 Importe a planilha do 4° Ano A para ver os resultados.</p>
+  </div>
+
+  <div id="content-turmaA">
+    <div class="g4" style="margin-bottom:1.25rem">
+      <div class="stat"><div class="val" id="kA-alunos">–</div><div class="lbl">Alunos</div></div>
+      <div class="stat"><div class="val" id="kA-geral">–</div><div class="lbl">Média Geral</div></div>
+      <div class="stat"><div class="val" id="kA-port">–</div><div class="lbl">Média Português</div></div>
+      <div class="stat"><div class="val" id="kA-math">–</div><div class="lbl">Média Matemática</div></div>
+    </div>
+
+    <div class="sub-nav" id="subnav-A">
+      <button class="sub-btn active" data-subtab="ranking"    onclick="showSubTab('A','ranking')">🏆 Ranking da Turma</button>
+      <button class="sub-btn"        data-subtab="individual" onclick="showSubTab('A','individual')">👥 Resultados Individuais</button>
+      <button class="sub-btn"        data-subtab="gabarito"   onclick="showSubTab('A','gabarito')">📊 Gabarito Visual</button>
+      <button class="sub-btn"        data-subtab="pcd"        onclick="showSubTab('A','pcd')">🧩 Observações PCD</button>
+    </div>
+
+    <div class="sub-section" id="sub-A-ranking">
+      <div class="g2">
+        <div class="rank-card">
+          <div class="rank-card-header">
+            <h3 style="color:var(--port-blue)">📚 Língua Portuguesa</h3>
+            <button class="btn btn-outline btn-sm" onclick="downloadRankingPDF('A','port')">⬇️ PDF</button>
+          </div>
+          <div id="rank-port-a"></div>
+        </div>
+        <div class="rank-card">
+          <div class="rank-card-header">
+            <h3 style="color:var(--math-purple)">🔢 Matemática</h3>
+            <button class="btn btn-outline btn-sm" onclick="downloadRankingPDF('A','math')">⬇️ PDF</button>
+          </div>
+          <div id="rank-math-a"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sub-section" id="sub-A-individual" style="display:none">
+      <div class="card">
+        <div class="card-title">
+          <h2>👥 Resultados Individuais — 4° Ano A</h2>
+          <button class="btn btn-outline btn-sm" onclick="downloadIndividualPDF('A')">⬇️ PDF</button>
+        </div>
+        <div class="tbl-wrap" id="tbl-ind-a"></div>
+      </div>
+    </div>
+
+    <div class="sub-section" id="sub-A-gabarito" style="display:none">
+      <div class="card">
+        <div class="card-title">
+          <h2 style="color:var(--port-blue)">📊 Gabarito Visual — Língua Portuguesa (4° Ano A)</h2>
+          <button class="btn btn-outline btn-sm" onclick="downloadGabaritoVisualPDF('A','port')">⬇️ PDF</button>
+        </div>
+        <div id="gv-port-a"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">
+          <h2 style="color:var(--math-purple)">📊 Gabarito Visual — Matemática (4° Ano A)</h2>
+          <button class="btn btn-outline btn-sm" onclick="downloadGabaritoVisualPDF('A','math')">⬇️ PDF</button>
+        </div>
+        <div id="gv-math-a"></div>
+      </div>
+    </div>
+
+    <div class="sub-section" id="sub-A-pcd" style="display:none">
+      <div class="card">
+        <div class="card-title">
+          <h2>🧩 Observações — Alunos PCD (4° Ano A)</h2>
+        </div>
+        <div id="pcd-msg-a"></div>
+        <div id="pcd-a"></div>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<!-- ════════════════ TURMA B ════════════════ -->
+<section id="sec-turmaB" class="section">
+
+  <div id="empty-turmaB" class="card tc" style="display:none">
+    <p class="muted" style="padding:2rem;font-size:1rem">📭 Importe a planilha do 4° Ano B para ver os resultados.</p>
+  </div>
+
+  <div id="content-turmaB">
+    <div class="g4" style="margin-bottom:1.25rem">
+      <div class="stat"><div class="val" id="kB-alunos">–</div><div class="lbl">Alunos</div></div>
+      <div class="stat"><div class="val" id="kB-geral">–</div><div class="lbl">Média Geral</div></div>
+      <div class="stat"><div class="val" id="kB-port">–</div><div class="lbl">Média Português</div></div>
+      <div class="stat"><div class="val" id="kB-math">–</div><div class="lbl">Média Matemática</div></div>
+    </div>
+
+    <div class="sub-nav" id="subnav-B">
+      <button class="sub-btn active" data-subtab="ranking"    onclick="showSubTab('B','ranking')">🏆 Ranking da Turma</button>
+      <button class="sub-btn"        data-subtab="individual" onclick="showSubTab('B','individual')">👥 Resultados Individuais</button>
+      <button class="sub-btn"        data-subtab="gabarito"   onclick="showSubTab('B','gabarito')">📊 Gabarito Visual</button>
+      <button class="sub-btn"        data-subtab="pcd"        onclick="showSubTab('B','pcd')">🧩 Observações PCD</button>
+    </div>
+
+    <div class="sub-section" id="sub-B-ranking">
+      <div class="g2">
+        <div class="rank-card">
+          <div class="rank-card-header">
+            <h3 style="color:var(--port-blue)">📚 Língua Portuguesa</h3>
+            <button class="btn btn-outline btn-sm" onclick="downloadRankingPDF('B','port')">⬇️ PDF</button>
+          </div>
+          <div id="rank-port-b"></div>
+        </div>
+        <div class="rank-card">
+          <div class="rank-card-header">
+            <h3 style="color:var(--math-purple)">🔢 Matemática</h3>
+            <button class="btn btn-outline btn-sm" onclick="downloadRankingPDF('B','math')">⬇️ PDF</button>
+          </div>
+          <div id="rank-math-b"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sub-section" id="sub-B-individual" style="display:none">
+      <div class="card">
+        <div class="card-title">
+          <h2>👥 Resultados Individuais — 4° Ano B</h2>
+          <button class="btn btn-outline btn-sm" onclick="downloadIndividualPDF('B')">⬇️ PDF</button>
+        </div>
+        <div class="tbl-wrap" id="tbl-ind-b"></div>
+      </div>
+    </div>
+
+    <div class="sub-section" id="sub-B-gabarito" style="display:none">
+      <div class="card">
+        <div class="card-title">
+          <h2 style="color:var(--port-blue)">📊 Gabarito Visual — Língua Portuguesa (4° Ano B)</h2>
+          <button class="btn btn-outline btn-sm" onclick="downloadGabaritoVisualPDF('B','port')">⬇️ PDF</button>
+        </div>
+        <div id="gv-port-b"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">
+          <h2 style="color:var(--math-purple)">📊 Gabarito Visual — Matemática (4° Ano B)</h2>
+          <button class="btn btn-outline btn-sm" onclick="downloadGabaritoVisualPDF('B','math')">⬇️ PDF</button>
+        </div>
+        <div id="gv-math-b"></div>
+      </div>
+    </div>
+
+    <div class="sub-section" id="sub-B-pcd" style="display:none">
+      <div class="card">
+        <div class="card-title">
+          <h2>🧩 Observações — Alunos PCD (4° Ano B)</h2>
+        </div>
+        <div id="pcd-msg-b"></div>
+        <div id="pcd-b"></div>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<!-- ════════════════ DESCRITORES ════════════════ -->
+<section id="sec-descritores" class="section">
+
+  <!-- Seleção de turma para descritores -->
+  <div class="class-sel">
+    <button class="class-btn a-act" id="dtA"   onclick="setDescTab('A')">📘 4° Ano A</button>
+    <button class="class-btn"       id="dtB"   onclick="setDescTab('B')">📗 4° Ano B</button>
+    <button class="class-btn"       id="dtALL" onclick="setDescTab('ALL')">📊 Geral</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <h2>📋 % Acerto por Descritor — Português</h2>
+      <button class="btn btn-outline btn-sm" onclick="downloadDescritoresPDF('Port')">⬇️ PDF</button>
+    </div>
+    <div class="chart-box-lg"><canvas id="cDescPort"></canvas></div>
+    <div class="tbl-wrap mt2" id="tbl-desc-port"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">
+      <h2>📋 % Acerto por Descritor — Matemática</h2>
+      <button class="btn btn-outline btn-sm" onclick="downloadDescritoresPDF('Math')">⬇️ PDF</button>
+    </div>
+    <div class="chart-box-lg"><canvas id="cDescMath"></canvas></div>
+    <div class="tbl-wrap mt2" id="tbl-desc-math"></div>
+  </div>
+
+</section>
+
+</main></script>
+
+<script>
+/* Aplicativo original (index.html) portado para o projeto.
+   Toda a lógica foi preservada; as quantidades de questões passaram a vir do
+   modo selecionado (SIMULADO DE 30 QUESTÕES ou SIMULADO DE 44 QUESTÕES). */
+/* eslint-disable */
+// @ts-nocheck
+
+const MODES = {
+  "30": { id: "30", nq: 30, perArea: 15, label: "SIMULADO DE 30 QUESTÕES" },
+  "44": { id: "44", nq: 44, perArea: 22, label: "SIMULADO DE 44 QUESTÕES" },
+};
+
+/* chaves de armazenamento por modo — o modo de 44 mantém as chaves antigas */
+function K(name) { return MODE_ID === "44" ? name : `${name}:${MODE_ID}`; }
+function FB(name) { return MODE_ID === "44" ? name : `simulado${MODE_ID}/${name}`; }
+
+/* ═══════════════════════════════ FIREBASE CONFIG ═══════════════════════════════
+   Preencha os valores abaixo com as credenciais do seu projeto Firebase.
+   Estas informações ficam apenas neste arquivo e não são exibidas no app.
+   ═══════════════════════════════════════════════════════════════════════════ */
+const firebaseConfig = {
+  apiKey: "AIzaSyDungnQv6WVEC7foc5CDzsLVXL96ffdREM",
+  authDomain: "corretor-ab7e9.firebaseapp.com",
+  databaseURL: "https://corretor-ab7e9-default-rtdb.firebaseio.com",
+  projectId: "corretor-ab7e9",
+  storageBucket: "corretor-ab7e9.firebasestorage.app",
+  messagingSenderId: "1066679839562",
+  appId: "1:1066679839562:web:9166c565af4fda5bf0afb3",
+  measurementId: "G-KDMXQ3KVMD"
+};
+
+/* ═══════════════════════════════ STATE ═══════════════════════════════ */
+let db = null;
+let gabarito = {};          // {q1:{resp,desc,area,num}, ...}
+let resultadosA = [];       // alunos 4°A
+let resultadosB = [];       // alunos 4°B
+let currentTab = 'A';
+let currentDescTab = 'A';
+let charts = {};
+let importTurma = 'A';      // turma selecionada no import
+let obsPcd = { A: {}, B: {} };  // observações PCD por turma: { chave: 'observação' }
+
+let NQ = 44;
+let PA = 22;
+let MODE_ID = '44';
+
+/* ═══════════════════════════════ SUB-TABS ═══════════════════════════════ */
+function showSubTab(turma, tab) {
+  ['ranking', 'individual', 'gabarito', 'pcd'].forEach(t => {
+    const el = document.getElementById(`sub-${turma}-${t}`);
+    if (el) el.style.display = t === tab ? '' : 'none';
+  });
+  document.querySelectorAll(`#subnav-${turma} .sub-btn`).forEach(b => {
+    b.classList.toggle('active', b.dataset.subtab === tab);
+  });
+}
+
+/* ═══════════════════════════════ NAV ═══════════════════════════════ */
+let navBound = false;
+function bindNav() {
+  const root = document.querySelector('.legacy-app');
+  if (!root || navBound) return;
+  navBound = true;
+  root.querySelectorAll('nav button').forEach(btn => {
+    btn.addEventListener('click', () => showTab(btn.dataset.tab));
+  });
+  const dropEl = document.getElementById('fileDrop');
+  if (dropEl) {
+    dropEl.addEventListener('dragover', e => { e.preventDefault(); dropEl.classList.add('over'); });
+    dropEl.addEventListener('dragleave', () => dropEl.classList.remove('over'));
+    dropEl.addEventListener('drop', e => {
+      e.preventDefault();
+      dropEl.classList.remove('over');
+      if (e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]);
+    });
+  }
+}
+
+
+/* ═══════════════════════════════ FIREBASE ═══════════════════════════════ */
+function connectFirebase() {
+    const c = firebaseConfig;
+
+    if (!c.apiKey || !c.databaseURL) return;
+
+    try {
+        const app = firebase.apps.length ? firebase.app() : firebase.initializeApp(c);
+        db = firebase.database(app);
+
+        const badge = document.getElementById("fbStatus");
+        if (badge) badge.style.display = "";
+        db.ref(".info/connected").on("value", s => {
+            const el = document.getElementById("fbStatus");
+            if (el) el.textContent = s.val() ? "🟢 Firebase conectado" : "🔴 Firebase offline";
+        });
+
+    } catch(e) {
+        console.warn(e);
+    }
+}
+
+/* ═══════════════════════════════ GABARITO ═══════════════════════════════ */
+function buildGabaritoGrid() {
+  buildGrid('grid-port', 1, PA, 'qp', 'Português');
+  buildGrid('grid-math', PA + 1, NQ, 'qm', 'Matemática');
+}
+
+function buildGrid(cid, from, to, cls, area) {
+  const c = document.getElementById(cid);
+  c.innerHTML = '';
+  for (let q = from; q <= to; q++) {
+    const d = document.createElement('div');
+    d.className = `qcard ${cls}`;
+    d.innerHTML = `
+      <div class="qnum-lbl">Q${q} — ${area}</div>
+      <div class="qrow">
+        <label>Resp:</label>
+        <select id="gr-${q}"><option value="">—</option><option>A</option><option>B</option><option>C</option><option>D</option></select>
+        <label>Desc:</label>
+        <input type="text" id="gd-${q}" placeholder="D01" maxlength="8" />
+      </div>`;
+    c.appendChild(d);
+  }
+}
+
+function collectGabarito() {
+  const g = {};
+  for (let q = 1; q <= NQ; q++) {
+    g[`q${q}`] = {
+      resp: gv(`gr-${q}`).toUpperCase(),
+      desc: gv(`gd-${q}`).trim().toUpperCase(),
+      area: q <= PA ? 'Português' : 'Matemática',
+      num: q
+    };
+  }
+  return g;
+}
+
+function fillGabaritoForm(g) {
+  for (let q = 1; q <= NQ; q++) {
+    const k = `q${q}`;
+    if (!g[k]) continue;
+    const r = document.getElementById(`gr-${q}`);
+    const d = document.getElementById(`gd-${q}`);
+    if (r) r.value = g[k].resp || '';
+    if (d) d.value = g[k].desc || '';
+  }
+}
+
+async function saveGabarito() {
+  const g = collectGabarito();
+  gabarito = g;
+  localStorage.setItem(K('gabarito'), JSON.stringify(g));
+  if (db) {
+    try {
+      await db.ref(FB('gabarito')).set(g);
+      msg('gab-msg','✅ Gabarito salvo no Firebase e localmente!','a-ok');
+    } catch(e) {
+      msg('gab-msg','💾 Salvo localmente (Firebase: '+e.message+')','a-warn');
+    }
+  } else {
+    msg('gab-msg','💾 Gabarito salvo localmente (Firebase não conectado).','a-warn');
+  }
+  // Recalcular resultados com novo gabarito
+  recalcAll();
+}
+
+async function loadGabaritoFromStorage() {
+  if (db) {
+    try {
+      const snap = await db.ref(FB('gabarito')).get();
+      if (snap.exists()) {
+        gabarito = snap.val();
+        fillGabaritoForm(gabarito);
+        localStorage.setItem(K('gabarito'), JSON.stringify(gabarito));
+        msg('gab-msg','☁️ Gabarito carregado do Firebase!','a-ok');
+        recalcAll();
+        return;
+      }
+    } catch(e) {}
+  }
+  const local = localStorage.getItem(K('gabarito'));
+  if (local) {
+    gabarito = JSON.parse(local);
+    fillGabaritoForm(gabarito);
+    msg('gab-msg','📂 Gabarito carregado do armazenamento local.','a-info');
+    recalcAll();
+  } else {
+    msg('gab-msg','Nenhum gabarito encontrado.','a-warn');
+  }
+}
+
+/* ═══════════════════════════════ IMPORT ═══════════════════════════════ */
+function selectTurmaImport(t) {
+  importTurma = t;
+  ['A','B'].forEach(x => {
+    const b = document.getElementById('tb-'+x);
+    b.className = 'turma-btn' + (x === t ? (t==='A'?' sel-a':' sel-b') : '');
+  });
+}
+
+/* o arrastar-e-soltar é ligado em bindNav() */
+
+
+function handleFile(inp) { if(inp.files[0]) processFile(inp.files[0]); }
+
+function processFile(file) {
+  const ext = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
+  if (!['.xls','.xlsx'].includes(ext)) { msg('import-msg','❌ Use .xls ou .xlsx','a-err'); return; }
+
+  ensureGabarito();
+  if (!Object.keys(gabarito).length) {
+    msg('import-msg','⚠️ Gabarito oficial não encontrado. Vá à aba "Gabarito Oficial" e salve-o primeiro.','a-warn');
+    return;
+  }
+
+  msg('import-msg','<span class="spinner"></span> Lendo planilha...','a-info');
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'binary' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      // header:1 para array de arrays; defval:'' para células vazias
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+      // Identifica linha de cabeçalho
+      // O cabeçalho contém "Núm. da lista" ou "Nome" na primeira ou segunda coluna
+      let dataStart = 0;
+      for (let i = 0; i < Math.min(5, rows.length); i++) {
+        const row = rows[i];
+        const joined = row.join('|').toLowerCase();
+        if (joined.includes('núm') || joined.includes('nome') || joined.includes('q 1') || joined.includes('options')) {
+          dataStart = i + 1;
+          break;
+        }
+      }
+
+      const dataRows = rows.slice(dataStart).filter(r => r[1] && String(r[1]).trim());
+
+      if (!dataRows.length) {
+        msg('import-msg','⚠️ Nenhum dado de aluno encontrado na planilha.','a-warn');
+        return;
+      }
+
+      const alunos = dataRows.map(row => parseAluno(row, importTurma));
+
+      /* guarda as linhas originais para recalcular quando o gabarito mudar */
+      try { localStorage.setItem(K('raw' + importTurma), JSON.stringify(dataRows)); } catch (e) {}
+
+      if (importTurma === 'A') {
+        resultadosA = alunos;
+        localStorage.setItem(K('resultadosA'), JSON.stringify(alunos));
+      } else {
+        resultadosB = alunos;
+        localStorage.setItem(K('resultadosB'), JSON.stringify(alunos));
+      }
+
+
+      // Salvar no Firebase
+      if (db) {
+        db.ref(FB(`resultados${importTurma}`)).set(alunos)
+          .catch(err => console.warn('Firebase save:', err.message));
+      }
+
+      updateImportBadges();
+      renderImportPreview(alunos, importTurma);
+      msg('import-msg',`✅ ${alunos.length} alunos do 4°${importTurma} importados com sucesso!`,'a-ok');
+      // reset file input
+      document.getElementById('fileInput').value = '';
+
+    } catch(err) {
+      msg('import-msg','❌ Erro ao processar: '+err.message,'a-err');
+    }
+  };
+  reader.readAsBinaryString(file);
+}
+
+function parseAluno(row, turma) {
+  // Formato: [Núm, Nome, Q1, Q2, ..., Q44]
+  // col 0 = número, col 1 = nome, col 2..45 = Q1..Q44
+  const numero = String(row[0] || '').trim();
+  const nome   = String(row[1] || '').trim();
+  const respostas = {};
+  let acPort = 0, acMath = 0;
+
+  for (let q = 1; q <= NQ; q++) {
+    const respAluno = String(row[q + 1] || '').trim().toUpperCase();
+    const gabQ = gabarito[`q${q}`] || {};
+    const correta = (gabQ.resp || '').toUpperCase();
+    const acertou = correta !== '' && respAluno === correta;
+    respostas[`q${q}`] = { respAluno, correta, acertou, desc: gabQ.desc || '', area: gabQ.area || '' };
+    if (q <= PA) { if (acertou) acPort++; }
+    else         { if (acertou) acMath++; }
+  }
+
+  const total = acPort + acMath;
+  return {
+    numero, nome, turma,
+    respostas,
+    acPort, acMath, total,
+    pctPort:  pct(acPort, PA),
+    pctMath:  pct(acMath, PA),
+    pctGeral: pct(total, NQ),
+  };
+}
+
+function recalcAll() {
+  // Re-processar alunos já importados com novo gabarito
+  ['A','B'].forEach(t => {
+    const raw = localStorage.getItem(K('raw'+t));
+    if (!raw) return;
+    const rows = JSON.parse(raw);
+    const alunos = rows.map(r => parseAluno(r, t));
+    if (t==='A') resultadosA = alunos; else resultadosB = alunos;
+    localStorage.setItem(K('resultados'+t), JSON.stringify(alunos));
+    if (db) db.ref(FB('resultados'+t)).set(alunos).catch(()=>{});
+  });
+}
+
+function clearTurma(t) {
+  if (!confirm(`Apagar dados do 4°${t}?`)) return;
+  if (t==='A') resultadosA = [];
+  else resultadosB = [];
+  localStorage.removeItem(K('resultados'+t));
+  localStorage.removeItem(K('raw'+t));
+  if (db) db.ref(FB('resultados'+t)).remove().catch(()=>{});
+  updateImportBadges();
+  msg('import-msg',`🗑️ Dados do 4°${t} removidos.`,'a-info');
+}
+
+function updateImportBadges() {
+  const ca = resultadosA.length, cb = resultadosB.length;
+  document.getElementById('cnt-a').textContent = ca ? `${ca} alunos` : 'não importado';
+  document.getElementById('cnt-b').textContent = cb ? `${cb} alunos` : 'não importado';
+  document.getElementById('dot-a').className = 'dot ' + (ca ? 'dot-ok' : 'dot-no');
+  document.getElementById('dot-b').className = 'dot ' + (cb ? 'dot-ok' : 'dot-no');
+  document.getElementById('clear-a').style.display = ca ? 'inline-flex' : 'none';
+  document.getElementById('clear-b').style.display = cb ? 'inline-flex' : 'none';
+}
+
+function renderImportPreview(alunos, turma) {
+  const avg = a => a.length ? Math.round(a.reduce((s,x)=>s+x,0)/a.length) : 0;
+  const base = alunosMedia(alunos);   // exclui alunos PCD do cálculo das médias
+  const avgPort  = avg(base.map(a=>a.pctPort));
+  const avgMath  = avg(base.map(a=>a.pctMath));
+  const avgGeral = avg(base.map(a=>a.pctGeral));
+
+  document.getElementById('import-preview').innerHTML = `
+    <div class="g3 fade">
+      <div class="stat"><div class="val">${alunos.length}</div><div class="lbl">Alunos importados</div></div>
+      <div class="stat"><div class="val">${avgPort}%</div><div class="lbl">Média Português</div></div>
+      <div class="stat"><div class="val">${avgMath}%</div><div class="lbl">Média Matemática</div></div>
+    </div>
+    <div class="alert a-ok mt2">✅ 4°${turma} importado. Veja os resultados nas abas <strong>Dashboard</strong>, <strong>Ranking</strong> e <strong>Descritores</strong>.</div>`;
+}
+
+/* ═══════════════════════════════ DASHBOARD ═══════════════════════════════ */
+function getFiltered(t) {
+  if (t==='A')   return resultadosA;
+  if (t==='B')   return resultadosB;
+  return [...resultadosA, ...resultadosB];
+}
+
+function renderDashboard() {
+  const all = getFiltered('ALL');
+  if (!all.length) {
+    document.getElementById('dash-empty').style.display = 'block';
+    document.getElementById('dash-content').style.display = 'none';
+    return;
+  }
+  document.getElementById('dash-empty').style.display = 'none';
+  document.getElementById('dash-content').style.display = 'block';
+
+  renderDashTurma('a', resultadosA);
+  renderDashTurma('b', resultadosB);
+  chartComp();
+}
+
+function renderDashTurma(t, arr) {
+  const m = alunosMedia(arr);   // médias/estatísticas sem os alunos PCD
+  const avg = fn => m.length ? Math.round(m.reduce((s,a) => s + fn(a), 0) / m.length) : 0;
+  document.getElementById(`dk-${t}-alunos`).textContent = arr.length || '–';
+  document.getElementById(`dk-${t}-geral`).textContent  = m.length ? avg(a=>a.pctGeral)+'%'  : '–';
+  document.getElementById(`dk-${t}-port`).textContent   = m.length ? avg(a=>a.pctPort)+'%'   : '–';
+  document.getElementById(`dk-${t}-math`).textContent   = m.length ? avg(a=>a.pctMath)+'%'   : '–';
+  if (!m.length) return;
+  const T = t.toUpperCase();
+  chartDist(m, 'cDist'+T);
+  chartArea(m, 'cArea'+T);
+  chartQuest(m, 'cQuest'+T);
+}
+
+function chartDist(arr, id='cDist') {
+  const b = [0,0,0,0,0];
+  arr.forEach(a => {
+    const p = a.pctGeral;
+    if(p<=20)b[0]++; else if(p<=40)b[1]++; else if(p<=60)b[2]++; else if(p<=80)b[3]++; else b[4]++;
+  });
+  mkChart(id,'bar',{
+    labels:['0–20%','21–40%','41–60%','61–80%','81–100%'],
+    datasets:[{label:'Alunos',data:b,backgroundColor:['#f87171','#fb923c','#facc15','#4ade80','#22d3ee'],borderRadius:6}]
+  },{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}});
+}
+
+function chartComp() {
+  const avgF = (arr,fn) => arr.length ? Math.round(arr.reduce((s,a)=>s+fn(a),0)/arr.length) : 0;
+  mkChart('cComp','bar',{
+    labels:['Português','Matemática','Geral'],
+    datasets:[
+      {label:'4° A',data:[avgF(alunosMedia(resultadosA),a=>a.pctPort),avgF(alunosMedia(resultadosA),a=>a.pctMath),avgF(alunosMedia(resultadosA),a=>a.pctGeral)],backgroundColor:'#60a5fa',borderRadius:6},
+      {label:'4° B',data:[avgF(alunosMedia(resultadosB),a=>a.pctPort),avgF(alunosMedia(resultadosB),a=>a.pctMath),avgF(alunosMedia(resultadosB),a=>a.pctGeral)],backgroundColor:'#a78bfa',borderRadius:6},
+    ]
+  },{responsive:true,maintainAspectRatio:false,scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'}}}});
+}
+
+function chartArea(arr, id='cArea') {
+  const avg = fn => arr.length ? Math.round(arr.reduce((s,a)=>s+fn(a),0)/arr.length) : 0;
+  mkChart(id,'doughnut',{
+    labels:['Português','Matemática'],
+    datasets:[{data:[avg(a=>a.pctPort),avg(a=>a.pctMath)],backgroundColor:['#38bdf8','#a78bfa'],borderWidth:2}]
+  },{responsive:true,maintainAspectRatio:false,plugins:{tooltip:{callbacks:{label:c=>c.label+': '+c.raw+'%'}}}});
+}
+
+function chartQuest(arr, id='cQuest') {
+  const labels=[], data=[];
+  for (let q=1;q<=NQ;q++) {
+    labels.push('Q'+q);
+    const ac = arr.filter(a=>a.respostas[`q${q}`]?.acertou).length;
+    data.push(arr.length ? Math.round(ac/arr.length*100) : 0);
+  }
+  mkChart(id,'line',{
+    labels,
+    datasets:[{label:'% acerto',data,borderColor:'#6366f1',backgroundColor:'rgba(99,102,241,.12)',fill:true,tension:.35,pointRadius:2}]
+  },{responsive:true,maintainAspectRatio:false,scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'}}},plugins:{legend:{display:false}}});
+}
+
+function tblAlunos(arr) {
+  const sorted = [...arr].sort((a,b)=>b.pctGeral-a.pctGeral);
+  let h = `<table><thead><tr><th>#</th><th>Nº</th><th>Nome</th><th>Turma</th><th>Port. %</th><th>Nível Port.</th><th>Mat. %</th><th>Nível Mat.</th><th>Geral</th></tr></thead><tbody>`;
+  sorted.forEach((a,i) => {
+    const np = nivelPort(a.pctPort);
+    const nm = nivelMath(a.pctMath);
+    h += `<tr>
+      <td>${i+1}</td>
+      <td class="muted">${esc(a.numero)}</td>
+      <td><strong>${esc(nomeExib(a))}</strong></td>
+      <td><span class="tag ${a.turma==='A'?'tag-a':'tag-b'}">4° ${a.turma}</span></td>
+      <td>${a.pctPort}%<br><span class="muted" style="font-size:.72rem">${a.acPort}/${PA}</span></td>
+      <td>${nvBadge(np)}</td>
+      <td>${a.pctMath}%<br><span class="muted" style="font-size:.72rem">${a.acMath}/${PA}</span></td>
+      <td>${nvBadge(nm)}</td>
+      <td><strong>${a.pctGeral}%</strong></td>
+    </tr>`;
+  });
+  h += '</tbody></table>';
+  document.getElementById('tbl-alunos').innerHTML = h;
+}
+
+/* ═══════════════════════════════ TURMA PAGE ═══════════════════════════════ */
+function renderTurmaPage(turma) {
+  const arr = turma === 'A' ? resultadosA : resultadosB;
+  const t = turma.toLowerCase();
+
+  const emptyEl   = document.getElementById(`empty-turma${turma}`);
+  const contentEl = document.getElementById(`content-turma${turma}`);
+
+  if (!arr.length) {
+    emptyEl.style.display = 'block';
+    contentEl.style.display = 'none';
+    return;
+  }
+  emptyEl.style.display = 'none';
+  contentEl.style.display = 'block';
+
+  const m = alunosMedia(arr);   // médias da turma sem os alunos PCD
+  const avg = fn => m.length ? Math.round(m.reduce((s,a) => s + fn(a), 0) / m.length) : 0;
+  document.getElementById(`k${turma}-alunos`).textContent = arr.length;
+  document.getElementById(`k${turma}-geral`).textContent  = avg(a => a.pctGeral)  + '%';
+  document.getElementById(`k${turma}-port`).textContent   = avg(a => a.pctPort)   + '%';
+  document.getElementById(`k${turma}-math`).textContent   = avg(a => a.pctMath)   + '%';
+
+  rankBySubject(`rank-port-${t}`, arr, 'port');
+  rankBySubject(`rank-math-${t}`, arr, 'math');
+  tblIndividual(`tbl-ind-${t}`, arr);
+  renderGabaritoVisual(turma, 'port');
+  renderGabaritoVisual(turma, 'math');
+  renderPcdPanel(turma);
+}
+
+/* ═══════════════════════════════ GABARITO VISUAL ═══════════════════════════════ */
+function renderGabaritoVisual(turma, area) {
+  const arr = turma === 'A' ? resultadosA : resultadosB;
+  const t   = turma.toLowerCase();
+  const el  = document.getElementById(`gv-${area}-${t}`);
+  if (!el) return;
+  if (!arr.length) { el.innerHTML = ''; return; }
+
+  const [from, to] = area === 'port' ? [1, PA] : [PA + 1, NQ];
+  const nivelFn    = area === 'port' ? nivelPort : nivelMath;
+  const acKey      = area === 'port' ? 'acPort'  : 'acMath';
+  const pctKey     = area === 'port' ? 'pctPort' : 'pctMath';
+  const sorted     = [...arr].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+
+  const LVL_GV = { ADEQUADO:{bg:'#166534',fg:'#fff'}, INTERMEDIÁRIO:{bg:'#4ade80',fg:'#14532d'}, CRÍTICO:{bg:'#f59e0b',fg:'#78350f'}, 'MUITO CRÍTICO':{bg:'#dc2626',fg:'#fff'} };
+
+  /* ── Linha 1 do thead: gabarito oficial ── */
+  let gabRow = `<tr style="background:#1e2a3b">
+    <th class="th-nr" style="color:#9ca3af;font-weight:700;background:#1e2a3b">–</th>
+    <th class="th-nome" style="color:#fff;font-weight:800;font-size:.73rem;letter-spacing:.3px;background:#1e2a3b;text-align:left">GABARITO OFICIAL</th>`;
+  for (let q = from; q <= to; q++) {
+    const gab = gabarito[`q${q}`];
+    const resp = gab ? esc(gab.resp) : '–';
+    gabRow += `<th style="background:#1e2a3b;color:#fbbf24;font-weight:800;text-align:center;font-size:.72rem;border:1px solid #374151">${resp}</th>`;
+  }
+  gabRow += `<th style="background:#1e2a3b;color:#9ca3af;text-align:center">–</th><th style="background:#1e2a3b;color:#9ca3af;text-align:center">–</th><th style="background:#1e2a3b;color:#9ca3af;text-align:center">–</th></tr>`;
+
+  /* ── Linha 2 do thead: descritores ── */
+  let descRow = `<tr style="background:#f0f4ff">
+    <th class="th-nr" style="color:#9ca3af;font-weight:700;background:#f0f4ff">–</th>
+    <th class="th-nome" style="color:#4b5563;font-weight:800;font-size:.73rem;letter-spacing:.3px;background:#f0f4ff;text-align:left">DESCRITOR</th>`;
+  for (let q = from; q <= to; q++) {
+    const gab = gabarito[`q${q}`];
+    const desc = gab && gab.desc ? esc(gab.desc) : '–';
+    descRow += `<th style="background:#f0f4ff;color:#374151;font-weight:700;text-align:center;font-size:.65rem;border:1px solid #dde3ef;white-space:nowrap">${desc}</th>`;
+  }
+  descRow += `<th style="background:#f0f4ff;color:#9ca3af;text-align:center">–</th><th style="background:#f0f4ff;color:#9ca3af;text-align:center">–</th><th style="background:#f0f4ff;color:#9ca3af;text-align:center">–</th></tr>`;
+
+  /* header — linha com nome do aluno vem APÓS gabarito e descritor */
+  let h = `<div class="gab-visual-wrap"><table class="gab-table"><thead>
+  ${gabRow}
+  ${descRow}
+  <tr>
+    <th class="th-nr">Nº</th>
+    <th class="th-nome">NOME DO(A) ALUNO(A)</th>
+    <th colspan="${to - from + 1}" style="text-align:center;font-size:.68rem;color:var(--muted)"></th>
+    <th style="min-width:58px">TOTAL</th>
+    <th style="min-width:90px">RESULTADO</th>
+    <th style="min-width:110px">SITUAÇÃO</th>
+  </tr></thead><tbody>`;
+
+  /* ── Linha de números das questões ── */
+  h += `<tr style="background:#374151">
+    <td class="td-nr" style="color:#9ca3af;font-weight:700">–</td>
+    <td class="td-nome" style="color:#d1d5db;font-weight:800;font-size:.73rem;letter-spacing:.3px">Nº QUESTÃO</td>`;
+  for (let q = from; q <= to; q++) {
+    h += `<td style="background:#374151;color:#e5e7eb;font-weight:800;text-align:center;font-size:.72rem;border:1px solid #4b5563">${q}</td>`;
+  }
+  h += `<td style="background:#374151;color:#9ca3af;text-align:center">–</td><td style="background:#374151;color:#9ca3af;text-align:center">–</td><td style="background:#374151;color:#9ca3af;text-align:center">–</td></tr>`;
+
+  /* ── Linhas 4+: alunos ── */
+  sorted.forEach((a, i) => {
+    const nv = nivelFn(a[pctKey]);
+    const c  = LVL_GV[nv.label] || { bg:'#eee', fg:'#000' };
+    h += `<tr>
+      <td class="td-nr">${i + 1}</td>
+      <td class="td-nome">${esc(a.nome)}${isPcd(a) ? ` <span title="${esc(getObsPcd(a))}" style="background:#ede9fe;color:#7c3aed;border-radius:4px;padding:0 .3rem;font-size:.62rem;font-weight:800">PCD</span>` : ''}</td>`;
+    for (let q = from; q <= to; q++) {
+      const r = a.respostas[`q${q}`];
+      if (!r || !r.respAluno) {
+        h += `<td class="gc-blank">–</td>`;
+      } else if (r.acertou) {
+        h += `<td class="gc-ok">${esc(r.respAluno)}</td>`;
+      } else {
+        h += `<td class="gc-err">${esc(r.respAluno)}</td>`;
+      }
+    }
+    h += `
+      <td class="td-total">${a[acKey]}/${PA}</td>
+      <td class="td-sit"><span style="display:inline-block;padding:.2rem .55rem;border-radius:5px;font-size:.7rem;font-weight:800;background:${c.bg};color:${c.fg}">${a[pctKey]}%</span></td>
+      <td style="text-align:center;padding:.4rem .35rem"><span style="display:inline-block;padding:.2rem .5rem;border-radius:5px;font-size:.68rem;font-weight:800;background:${c.bg};color:${c.fg};white-space:nowrap">${nv.label}</span></td>
+    </tr>`;
+  });
+  h += '</tbody></table></div>';
+  el.innerHTML = h;
+}
+
+async function downloadGabaritoVisualPDF(turma, area) {
+  const arr = turma === 'A' ? resultadosA : resultadosB;
+  if (!arr.length) { alert('Importe os dados da turma antes de gerar o PDF.'); return; }
+
+  const [from, to]  = area === 'port' ? [1, PA] : [PA + 1, NQ];
+  const nivelFn     = area === 'port' ? nivelPort : nivelMath;
+  const acKey       = area === 'port' ? 'acPort'  : 'acMath';
+  const pctKey      = area === 'port' ? 'pctPort' : 'pctMath';
+  const areaLabel   = area === 'port' ? 'Língua Portuguesa' : 'Matemática';
+  const hdrColor    = area === 'port' ? '#0284c7' : '#7c3aed';
+  const sorted      = [...arr].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'position:fixed;top:0;left:-9999px;background:#fff;font-family:Segoe UI,system-ui,sans-serif;padding:20px';
+  document.body.appendChild(wrap);
+
+  /* header */
+  const hdr = document.createElement('div');
+  hdr.style.cssText = `display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:10px;border-bottom:3px solid ${hdrColor}`;
+  hdr.innerHTML = `
+    <div>
+      <div style="font-size:1rem;font-weight:800;color:#1e2a3b">Gabarito Visual — ${areaLabel}</div>
+      <div style="font-size:.74rem;color:#6b7a99;margin-top:2px">4° Ano ${turma} · ordenado alfabeticamente · ${new Date().toLocaleDateString('pt-BR')}</div>
+    </div>`;
+  wrap.appendChild(hdr);
+
+  /* table — 100% inline styles so html2canvas captures colours */
+  const COLS = { bg: { ok:'#16a34a', err:'#dc2626', blank:'#ffffff' }, fg: { ok:'#ffffff', err:'#ffffff', blank:'#d1d5db' } };
+  const LVL  = { ADEQUADO:{bg:'#166534',fg:'#fff'}, INTERMEDIÁRIO:{bg:'#4ade80',fg:'#14532d'}, CRÍTICO:{bg:'#f59e0b',fg:'#78350f'}, 'MUITO CRÍTICO':{bg:'#dc2626',fg:'#fff'} };
+  const th   = (txt, extra='') => `<th style="background:#1e2a3b;color:#fff;padding:.35rem .3rem;text-align:center;font-weight:700;font-size:.68rem;border:1px solid #374151;white-space:nowrap${extra}">${txt}</th>`;
+  const td   = (txt, bg, fg, extra='') => `<td style="padding:.3rem .28rem;text-align:center;border:1px solid #e5e7eb;background:${bg};color:${fg};font-weight:700;font-size:.7rem${extra}">${txt}</td>`;
+
+  /* gabarito oficial row — primeira linha do thead */
+  let gabThead = `<tr>
+    ${th('–',';width:26px;background:#1e2a3b;color:#9ca3af')}
+    <th style="background:#1e2a3b;color:#fff;padding:.35rem .55rem;text-align:left;font-weight:800;font-size:.7rem;border:1px solid #374151;min-width:170px">GABARITO OFICIAL</th>`;
+  for (let q = from; q <= to; q++) {
+    const gab = gabarito[`q${q}`];
+    const resp = gab ? gab.resp : '–';
+    gabThead += `<th style="background:#1e2a3b;color:#fbbf24;padding:.35rem .3rem;text-align:center;font-weight:800;font-size:.7rem;border:1px solid #374151;width:22px">${resp}</th>`;
+  }
+  gabThead += `${th('–',';min-width:52px;background:#1e2a3b;color:#9ca3af')}${th('–',';min-width:90px;background:#1e2a3b;color:#9ca3af')}${th('–',';min-width:110px;background:#1e2a3b;color:#9ca3af')}</tr>`;
+
+  /* descritor row — segunda linha do thead */
+  let descThead = `<tr>
+    ${th('–',';width:26px;background:#f0f4ff;color:#9ca3af')}
+    <th style="background:#f0f4ff;color:#4b5563;padding:.35rem .55rem;text-align:left;font-weight:800;font-size:.7rem;border:1px solid #dde3ef;min-width:170px">DESCRITOR</th>`;
+  for (let q = from; q <= to; q++) {
+    const gab = gabarito[`q${q}`];
+    const desc = gab && gab.desc ? gab.desc : '–';
+    descThead += `<th style="background:#f0f4ff;color:#374151;padding:.35rem .28rem;text-align:center;font-weight:700;font-size:.62rem;border:1px solid #dde3ef;white-space:nowrap;width:22px">${desc}</th>`;
+  }
+  descThead += `${th('–',';min-width:52px;background:#f0f4ff;color:#9ca3af')}${th('–',';min-width:90px;background:#f0f4ff;color:#9ca3af')}${th('–',';min-width:110px;background:#f0f4ff;color:#9ca3af')}</tr>`;
+
+  /* header row com NOME DO ALUNO — terceira linha do thead */
+  let tbl = `<table style="border-collapse:collapse;font-size:.7rem;font-family:Segoe UI,system-ui,sans-serif;width:100%"><thead>
+  ${gabThead}
+  ${descThead}
+  <tr>
+    ${th('Nº',';width:26px')}
+    ${th('NOME DO(A) ALUNO(A)',';text-align:left;padding-left:.6rem;min-width:170px')}`;
+  for (let q = from; q <= to; q++) tbl += th(q, ';width:22px');
+  tbl += `${th('TOTAL',';min-width:52px')}${th('RESULTADO',';min-width:90px')}${th('SITUAÇÃO',';min-width:110px')}</tr></thead><tbody>`;
+
+  sorted.forEach((a, i) => {
+    const rowBg = i % 2 === 0 ? '#ffffff' : '#f8fafd';
+    const nv = nivelFn(a[pctKey]);
+    const lv = LVL[nv.label] || { bg:'#eee', fg:'#000' };
+    tbl += `<tr>
+      ${td(i+1, rowBg, '#6b7a99')}
+      <td style="padding:.3rem .55rem;text-align:left;border:1px solid #e5e7eb;background:${rowBg};font-weight:600;font-size:.7rem;border-right:2px solid #d1d5db">${esc(a.nome)}${isPcd(a) ? ' <span style="background:#ede9fe;color:#7c3aed;border-radius:3px;padding:0 3px;font-size:.6rem;font-weight:800">PCD</span>' : ''}</td>`;
+    for (let q = from; q <= to; q++) {
+      const r = a.respostas[`q${q}`];
+      if (!r || !r.respAluno) {
+        tbl += td('', '#fff', '#d1d5db');
+      } else if (r.acertou) {
+        tbl += td(r.respAluno, '#16a34a', '#fff');
+      } else {
+        tbl += td(r.respAluno, '#dc2626', '#fff');
+      }
+    }
+    const pctBadge = `<span style="display:inline-block;padding:.18rem .45rem;border-radius:4px;font-size:.66rem;font-weight:800;background:${lv.bg};color:${lv.fg}">${a[pctKey]}%</span>`;
+    const sitBadge = `<span style="display:inline-block;padding:.18rem .45rem;border-radius:4px;font-size:.66rem;font-weight:800;background:${lv.bg};color:${lv.fg};white-space:nowrap">${nv.label}</span>`;
+    tbl += `
+      ${td(`${a[acKey]}/${PA}`, '#eff4ff', '#1a56db', ';font-weight:800')}
+      <td style="padding:.3rem .35rem;text-align:center;border:1px solid #e5e7eb;background:${rowBg}">${pctBadge}</td>
+      <td style="padding:.3rem .35rem;text-align:center;border:1px solid #e5e7eb;background:${rowBg}">${sitBadge}</td>
+    </tr>`;
+  });
+  tbl += '</tbody></table>';
+  const tblDiv = document.createElement('div');
+  tblDiv.innerHTML = tbl;
+  wrap.appendChild(tblDiv);
+
+  try {
+    const canvas = await html2canvas(wrap, { scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff' });
+    document.body.removeChild(wrap);
+
+    const { jsPDF } = window.jspdf;
+    const pdf     = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const margin  = 10;
+    const pw      = pdf.internal.pageSize.getWidth();
+    const ph      = pdf.internal.pageSize.getHeight();
+    const usableW = pw - margin * 2;
+    const scale   = usableW / canvas.width;
+    const pageHpx = (ph - margin * 2) / scale;
+
+    let srcY = 0, page = 0;
+    while (srcY < canvas.height) {
+      const sliceH = Math.min(pageHpx, canvas.height - srcY);
+      const slice  = document.createElement('canvas');
+      slice.width  = canvas.width;
+      slice.height = Math.ceil(sliceH);
+      slice.getContext('2d').drawImage(canvas, 0, srcY, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+      if (page > 0) pdf.addPage();
+      pdf.addImage(slice.toDataURL('image/png'), 'PNG', margin, margin, usableW, sliceH * scale);
+      srcY += sliceH;
+      page++;
+    }
+    pdf.save(`gabarito_visual_4ano${turma}_${area}.pdf`);
+  } catch(e) {
+    if (document.body.contains(wrap)) document.body.removeChild(wrap);
+    alert('Erro ao gerar PDF: ' + e.message);
+  }
+}
+
+/* colour map shared by screen + PDF */
+const LEVEL_COLORS = {
+  'ADEQUADO':      { bg: '#166534', fg: '#ffffff' },
+  'INTERMEDIÁRIO': { bg: '#4ade80', fg: '#14532d' },
+  'CRÍTICO':       { bg: '#f59e0b', fg: '#78350f' },
+  'MUITO CRÍTICO': { bg: '#dc2626', fg: '#ffffff' },
+};
+
+function levelClass(nv) {
+  if (nv.label === 'ADEQUADO')      return 'score-adequado';
+  if (nv.label === 'INTERMEDIÁRIO') return 'score-intermediario';
+  if (nv.label === 'CRÍTICO')       return 'score-critico';
+  return 'score-muito-critico';
+}
+
+/* builds ranking table HTML using fully-inline colour styles
+   so the output looks identical on screen AND inside html2canvas */
+function rankingTableHTML(sorted, nivelFn, pctKey, acKey) {
+  let h = `<table class="rank-table"><tbody>`;
+  sorted.forEach((a, i) => {
+    const r = i + 1;
+    const posHtml = r === 1
+      ? `<span class="rk-medal medal-1">1°</span>`
+      : r === 2
+        ? `<span class="rk-medal medal-2">2°</span>`
+        : r === 3
+          ? `<span class="rk-medal medal-3">3°</span>`
+          : `<span class="rk-num">${r}</span>`;
+    const nv = nivelFn(a[pctKey]);
+    const c  = LEVEL_COLORS[nv.label] || { bg: '#eee', fg: '#000' };
+
+    /* pill = percentage + acertos  |  badge = label de situação */
+    const pillStyle  = `display:inline-flex;flex-direction:column;align-items:center;min-width:58px;padding:.38rem .5rem;border-radius:8px;font-weight:800;font-size:.88rem;line-height:1.15;background:${c.bg};color:${c.fg}`;
+    const smallStyle = `font-size:.63rem;font-weight:600;opacity:.85;margin-top:.1rem`;
+    const badgeStyle = `display:inline-block;padding:.3rem .75rem;border-radius:6px;font-size:.7rem;font-weight:800;letter-spacing:.35px;background:${c.bg};color:${c.fg};min-width:96px;text-align:center`;
+
+    h += `<tr>
+      <td class="rk-pos">${posHtml}</td>
+      <td>
+        <div class="rk-name">${esc(nomeExib(a))}</div>
+        ${a.numero ? `<div class="rk-sub">Nº ${esc(a.numero)}${isPcd(a) ? ' · PCD (fora da média)' : ''}</div>` : ''}
+      </td>
+      <td style="width:auto;padding:.6rem .95rem;vertical-align:middle">
+        <div style="display:flex;align-items:center;gap:.55rem;justify-content:flex-end">
+          <span style="${pillStyle}">${a[pctKey]}%<span style="${smallStyle}">${a[acKey]}/${PA}</span></span>
+          <span style="${badgeStyle}">${nv.label}</span>
+        </div>
+      </td>
+    </tr>`;
+  });
+  h += '</tbody></table>';
+  return h;
+}
+
+function rankBySubject(id, arr, subject) {
+  const el = document.getElementById(id);
+  if (!arr.length) { el.innerHTML = '<p class="muted tc" style="padding:1.5rem">Sem dados.</p>'; return; }
+
+  const sorted  = [...arr].sort((a, b) =>
+    subject === 'port' ? b.pctPort - a.pctPort : b.pctMath - a.pctMath
+  );
+  const nivelFn = subject === 'port' ? nivelPort : nivelMath;
+  const pctKey  = subject === 'port' ? 'pctPort' : 'pctMath';
+  const acKey   = subject === 'port' ? 'acPort'  : 'acMath';
+
+  /* ── Média da Turma (exclui alunos PCD) ── */
+  const mArr       = alunosMedia(arr);
+  const totalAc    = mArr.reduce((sum, a) => sum + a[acKey], 0);
+  const avgAcFloat = mArr.length ? totalAc / mArr.length : 0;
+  const avgAcStr   = (avgAcFloat % 1 === 0) ? String(avgAcFloat) : avgAcFloat.toFixed(1);
+  const avgPct     = Math.round(avgAcFloat / PA * 100);
+  const avgNivel   = nivelFn(avgPct);
+  const avgC       = LEVEL_COLORS[avgNivel.label] || { bg: '#eee', fg: '#000' };
+
+  const avgRow = `
+    <div style="margin:.6rem .6rem .75rem;border-radius:14px;overflow:hidden;box-shadow:0 4px 18px ${avgC.bg}55">
+      <!-- coloured header strip -->
+      <div style="background:linear-gradient(135deg,${avgC.bg} 0%,${avgC.bg}cc 100%);padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem">
+        <!-- big percentage -->
+        <div style="text-align:center;min-width:76px">
+          <div style="font-size:2.6rem;font-weight:900;color:${avgC.fg};line-height:1;letter-spacing:-1px">${avgPct}%</div>
+          <div style="font-size:.7rem;font-weight:700;color:${avgC.fg};opacity:.75;margin-top:.2rem;letter-spacing:.3px">${avgAcStr} / ${PA} acertos</div>
+        </div>
+        <!-- divider -->
+        <div style="width:1.5px;height:52px;background:${avgC.fg};opacity:.2;border-radius:2px;flex-shrink:0"></div>
+        <!-- text + badge -->
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:${avgC.fg};opacity:.65;margin-bottom:.25rem">Média da Turma · ${mArr.length} aluno${mArr.length !== 1 ? 's' : ''}${arr.length !== mArr.length ? ` (${arr.length - mArr.length} PCD fora da média)` : ''}</div>
+          <span style="display:inline-block;padding:.3rem 1rem;border-radius:6px;font-size:.78rem;font-weight:800;letter-spacing:.5px;background:rgba(255,255,255,.22);color:${avgC.fg};border:1.5px solid rgba(255,255,255,.35);backdrop-filter:blur(4px)">${avgNivel.label}</span>
+        </div>
+      </div>
+      <!-- progress bar track -->
+      <div style="background:#e5e7eb;height:8px">
+        <div style="height:8px;background:linear-gradient(90deg,${avgC.bg},${avgC.bg}aa);width:${avgPct}%;transition:width .5s ease;box-shadow:inset 0 -1px 2px rgba(0,0,0,.12)"></div>
+      </div>
+    </div>`;
+
+  el.innerHTML = rankingTableHTML(sorted, nivelFn, pctKey, acKey) + avgRow;
+}
+
+function tblIndividual(id, arr) {
+  const el = document.getElementById(id);
+  if (!arr.length) { el.innerHTML = '<p class="muted tc" style="padding:1.5rem">Sem dados.</p>'; return; }
+
+  const sorted = [...arr].sort((a, b) => b.pctGeral - a.pctGeral);
+
+  let h = `<table class="rank-table"><tbody>`;
+  sorted.forEach((a, i) => {
+    const r = i + 1;
+    const posHtml = r === 1
+      ? `<span class="rk-medal medal-1">1°</span>`
+      : r === 2 ? `<span class="rk-medal medal-2">2°</span>`
+      : r === 3 ? `<span class="rk-medal medal-3">3°</span>`
+      : `<span class="rk-num">${r}</span>`;
+
+    const np = nivelPort(a.pctPort);
+    const nm = nivelMath(a.pctMath);
+    const cp = LEVEL_COLORS[np.label] || { bg: '#eee', fg: '#000' };
+    const cm = LEVEL_COLORS[nm.label] || { bg: '#eee', fg: '#000' };
+
+    const mkPill  = c => `display:inline-flex;flex-direction:column;align-items:center;min-width:54px;padding:.35rem .48rem;border-radius:8px;font-weight:800;font-size:.86rem;line-height:1.15;background:${c.bg};color:${c.fg}`;
+    const mkBadge = c => `display:inline-block;padding:.28rem .65rem;border-radius:6px;font-size:.68rem;font-weight:800;letter-spacing:.35px;background:${c.bg};color:${c.fg};min-width:90px;text-align:center`;
+    const small   = `font-size:.62rem;font-weight:600;opacity:.85;margin-top:.1rem`;
+    const subHdr  = `font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:.28rem`;
+
+    h += `<tr>
+      <td class="rk-pos">${posHtml}</td>
+      <td>
+        <div class="rk-name">${esc(nomeExib(a))}</div>
+        ${a.numero ? `<div class="rk-sub">Nº ${esc(a.numero)}${isPcd(a) ? ' · PCD (fora da média)' : ''}</div>` : ''}
+      </td>
+      <td style="padding:.55rem .9rem;vertical-align:middle">
+        <div style="${subHdr}">📚 Português</div>
+        <div style="display:flex;align-items:center;gap:.45rem">
+          <span style="${mkPill(cp)}">${a.pctPort}%<span style="${small}">${a.acPort}/${PA}</span></span>
+          <span style="${mkBadge(cp)}">${np.label}</span>
+        </div>
+      </td>
+      <td style="padding:.55rem .9rem;vertical-align:middle">
+        <div style="${subHdr}">🔢 Matemática</div>
+        <div style="display:flex;align-items:center;gap:.45rem">
+          <span style="${mkPill(cm)}">${a.pctMath}%<span style="${small}">${a.acMath}/${PA}</span></span>
+          <span style="${mkBadge(cm)}">${nm.label}</span>
+        </div>
+      </td>
+      <td style="padding:.55rem .9rem;vertical-align:middle;text-align:center;min-width:64px">
+        <div style="${subHdr}">Geral</div>
+        <div style="font-size:1.1rem;font-weight:900;color:var(--text)">${a.pctGeral}%</div>
+      </td>
+    </tr>`;
+  });
+  h += '</tbody></table>';
+  el.innerHTML = h;
+}
+
+/* ═══════════════════════════════ DESCRITORES ═══════════════════════════════ */
+function setDescTab(t) {
+  currentDescTab = t;
+  ['A','B','ALL'].forEach(x => {
+    const b = document.getElementById('dt'+x);
+    b.className = 'class-btn' + (x===t?(t==='A'?' a-act':t==='B'?' b-act':' all-act'):'');
+  });
+  renderDescritores();
+}
+
+function renderDescritores() {
+  const arr = getFiltered(currentDescTab);
+  if (!arr.length) return;
+  renderDescArea('Port', alunosMedia(arr), [1, PA]);
+  renderDescArea('Math', alunosMedia(arr), [PA + 1, NQ]);
+}
+
+function renderDescArea(areaKey, data, range) {
+  const descs = {};
+  for (let q = range[0]; q <= range[1]; q++) {
+    const gabQ = gabarito[`q${q}`] || {};
+    const desc = gabQ.desc || 'S/D';
+    if (!descs[desc]) descs[desc] = { label: desc, questoes: [], ac: 0, total: 0 };
+    descs[desc].questoes.push(q);
+    data.forEach(a => {
+      const r = a.respostas[`q${q}`];
+      if (r) { descs[desc].total++; if (r.acertou) descs[desc].ac++; }
+    });
+  }
+
+  const sorted = Object.values(descs).sort((a,b) => a.label.localeCompare(b.label));
+  const pcts = sorted.map(d => d.total ? Math.round(d.ac/d.total*100) : 0);
+  const colors = pcts.map(p => p>=70?'#4ade80':p>=50?'#facc15':'#f87171');
+
+  mkChart('cDesc'+areaKey,'bar',{
+    labels: sorted.map(d=>d.label),
+    datasets:[{label:'% acerto',data:pcts,backgroundColor:colors,borderRadius:6}]
+  },{responsive:true,maintainAspectRatio:false,scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'}}},plugins:{legend:{display:false}}});
+
+  let h = `<table><thead><tr><th>Descritor</th><th>Questões</th><th>Acertos</th><th>Respostas</th><th>% Acerto</th><th>Barra</th></tr></thead><tbody>`;
+  sorted.forEach((d,i) => {
+    const p=pcts[i], bc=p>=70?'':p>=50?'warn':'bad';
+    h+=`<tr>
+      <td><strong>${esc(d.label)}</strong></td>
+      <td class="muted">${d.questoes.join(', ')}</td>
+      <td>${d.ac}</td>
+      <td>${d.total}</td>
+      <td><strong>${p}%</strong></td>
+      <td style="min-width:90px"><div class="pg-wrap"><div class="pg-bar ${bc}" style="width:${p}%"></div></div></td>
+    </tr>`;
+  });
+  h += '</tbody></table>';
+  document.getElementById('tbl-desc-'+areaKey.toLowerCase()).innerHTML = h;
+}
+
+/* ═══════════════════════════════ UTIL: pontos de corte seguros para o PDF ═══════════════════════════════
+   Retorna Y (em px do canvas do html2canvas) onde é seguro fatiar,
+   evitando dividir uma linha da tabela (ou bloco) no meio.                     */
+function collectSafeCutPoints(wrap, canvasScale) {
+  const wrapTop = wrap.getBoundingClientRect().top;
+  const points  = new Set();
+  points.add(0);
+  /* linhas das tabelas — principal fonte de corte */
+  wrap.querySelectorAll('tr').forEach(tr => {
+    const r = tr.getBoundingClientRect();
+    points.add(Math.round((r.bottom - wrapTop) * canvasScale));
+  });
+  /* filhos diretos do wrap (header, gráficos, cards) */
+  Array.from(wrap.children).forEach(el => {
+    const r = el.getBoundingClientRect();
+    points.add(Math.round((r.bottom - wrapTop) * canvasScale));
+  });
+  return [...points].sort((a, b) => a - b);
+}
+
+/* Fatia o canvas respeitando os pontos de corte, adiciona páginas ao PDF */
+function paginateCanvasToPDF(pdf, canvas, cutPoints, margin, usableW, pageHpx, scale) {
+  let srcY = 0, page = 0;
+  while (srcY < canvas.height) {
+    let sliceH;
+    const remain = canvas.height - srcY;
+    if (remain <= pageHpx) {
+      sliceH = remain;
+    } else {
+      const limit = srcY + pageHpx;
+      let best = -1;
+      for (const p of cutPoints) {
+        if (p > srcY && p <= limit) best = p;
+        else if (p > limit) break;
+      }
+      sliceH = (best > srcY) ? (best - srcY) : pageHpx;
+    }
+    const slice = document.createElement('canvas');
+    slice.width  = canvas.width;
+    slice.height = Math.ceil(sliceH);
+    slice.getContext('2d').drawImage(canvas, 0, srcY, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+    if (page > 0) pdf.addPage();
+    pdf.addImage(slice.toDataURL('image/png'), 'PNG', margin, margin, usableW, sliceH * scale);
+    srcY += sliceH;
+    page++;
+  }
+}
+
+/* ═══════════════════════════════ DOWNLOAD PDF RANKING ═══════════════════════════════ */
+async function downloadRankingPDF(turma, subject) {
+  const arr = turma === 'A' ? resultadosA : resultadosB;
+  if (!arr.length) { alert('Importe os dados da turma antes de gerar o PDF.'); return; }
+
+  const nivelFn     = subject === 'port' ? nivelPort : nivelMath;
+  const pctKey      = subject === 'port' ? 'pctPort' : 'pctMath';
+  const acKey       = subject === 'port' ? 'acPort'  : 'acMath';
+  const subjectLabel = subject === 'port' ? 'Língua Portuguesa' : 'Matemática';
+  const hdrColor     = subject === 'port' ? '#0284c7' : '#7c3aed';
+  const sorted       = [...arr].sort((a, b) => b[pctKey] - a[pctKey]);
+
+  /* Build off-screen container with 100 % inline styles — no CSS class dependency */
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'position:fixed;top:0;left:-9999px;width:620px;background:#fff;font-family:Segoe UI,system-ui,sans-serif;padding:28px 28px 20px';
+  document.body.appendChild(wrap);
+
+  /* ── header ── */
+  const header = document.createElement('div');
+  header.style.cssText = `display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;padding-bottom:14px;border-bottom:3px solid ${hdrColor}`;
+  header.innerHTML = `
+    <div>
+      <div style="font-size:1.1rem;font-weight:800;color:#1e2a3b">${subjectLabel}</div>
+      <div style="font-size:.78rem;color:#6b7a99;margin-top:3px">4° Ano ${turma} — Ranking por desempenho</div>
+    </div>
+    <div style="font-size:.72rem;color:#6b7a99">${new Date().toLocaleDateString('pt-BR')}</div>`;
+  wrap.appendChild(header);
+
+  /* ── table — fully inline-styled, same as screen render ── */
+  const tableWrap = document.createElement('div');
+  tableWrap.innerHTML = rankingTableHTML(sorted, nivelFn, pctKey, acKey);
+
+  /* force all rank-table base styles inline (html2canvas needs computed styles) */
+  const table = tableWrap.querySelector('table');
+  table.style.cssText = 'width:100%;border-collapse:collapse;font-size:.85rem';
+
+  table.querySelectorAll('tr').forEach((tr, idx) => {
+    tr.style.background = idx % 2 === 1 ? '#fafbfd' : '#ffffff';
+  });
+  table.querySelectorAll('td').forEach(td => {
+    if (!td.style.padding) td.style.cssText += ';padding:.58rem .9rem;border-bottom:1px solid #f0f2f7;vertical-align:middle';
+  });
+  /* position / medal cells */
+  table.querySelectorAll('.rk-pos').forEach(td => { td.style.cssText += ';width:42px;text-align:center'; });
+  table.querySelectorAll('.rk-medal').forEach(el => {
+    const isMedal1 = el.classList.contains('medal-1');
+    const isMedal2 = el.classList.contains('medal-2');
+    el.style.cssText = `display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;font-weight:800;font-size:.78rem;background:${isMedal1?'#fbbf24':isMedal2?'#94a3b8':'#b87333'};color:${isMedal1?'#78350f':'#fff'}`;
+  });
+  table.querySelectorAll('.rk-num').forEach(el => {
+    el.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:#f1f5fb;color:#6b7a99;font-weight:700;font-size:.78rem';
+  });
+  table.querySelectorAll('.rk-name').forEach(el => { el.style.cssText = 'font-weight:700;font-size:.86rem;color:#1e3a8a;background:#93c5fd;padding:3px 10px;border-radius:6px;display:inline-block'; });
+  table.querySelectorAll('.rk-sub').forEach(el => { el.style.cssText = 'font-size:.72rem;color:#6b7a99'; });
+
+  wrap.appendChild(tableWrap);
+
+  /* ── Média da Turma no PDF ── */
+  const mArrPdf       = alunosMedia(arr);
+  const totalAcPdf    = mArrPdf.reduce((sum, a) => sum + a[acKey], 0);
+  const avgAcFloatPdf = mArrPdf.length ? totalAcPdf / mArrPdf.length : 0;
+  const avgAcStrPdf   = (avgAcFloatPdf % 1 === 0) ? String(avgAcFloatPdf) : avgAcFloatPdf.toFixed(1);
+  const avgPctPdf     = Math.round(avgAcFloatPdf / PA * 100);
+  const avgNivelPdf   = nivelFn(avgPctPdf);
+  const avgCPdf       = LEVEL_COLORS[avgNivelPdf.label] || { bg: '#eee', fg: '#000' };
+
+  const avgDivPdf = document.createElement('div');
+  avgDivPdf.style.cssText = `margin:6px 0 0;border-radius:12px;overflow:hidden;font-family:Segoe UI,system-ui,sans-serif`;
+  avgDivPdf.innerHTML = `
+    <div style="background:${avgCPdf.bg};padding:14px 18px;display:flex;align-items:center;gap:14px">
+      <div style="text-align:center;min-width:72px">
+        <div style="font-size:2.2rem;font-weight:900;color:${avgCPdf.fg};line-height:1;letter-spacing:-1px">${avgPctPdf}%</div>
+        <div style="font-size:.68rem;font-weight:700;color:${avgCPdf.fg};opacity:.75;margin-top:3px">${avgAcStrPdf} / ${PA} acertos</div>
+      </div>
+      <div style="width:1.5px;height:48px;background:${avgCPdf.fg};opacity:.2;border-radius:2px;flex-shrink:0"></div>
+      <div style="flex:1">
+        <div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:${avgCPdf.fg};opacity:.65;margin-bottom:6px">Média da Turma · ${mArrPdf.length} alunos${arr.length !== mArrPdf.length ? ` (${arr.length - mArrPdf.length} PCD fora da média)` : ''}</div>
+        <span style="display:inline-block;padding:4px 12px;border-radius:5px;font-size:.74rem;font-weight:800;letter-spacing:.5px;background:rgba(255,255,255,.22);color:${avgCPdf.fg};border:1.5px solid rgba(255,255,255,.35)">${avgNivelPdf.label}</span>
+      </div>
+    </div>
+    <div style="background:#e5e7eb;height:7px"><div style="height:7px;background:${avgCPdf.bg};width:${avgPctPdf}%"></div></div>`;
+  wrap.appendChild(avgDivPdf);
+
+  try {
+    const canvas = await html2canvas(wrap, { scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff' });
+    /* coleta pontos seguros ANTES de remover o wrap do DOM */
+    const canvasScale = canvas.width / wrap.getBoundingClientRect().width;
+    const cutPoints   = collectSafeCutPoints(wrap, canvasScale);
+    document.body.removeChild(wrap);
+
+    const { jsPDF } = window.jspdf;
+    const pdf     = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const margin  = 12;
+    const pw      = pdf.internal.pageSize.getWidth();
+    const ph      = pdf.internal.pageSize.getHeight();
+    const usableW = pw - margin * 2;
+    const scale   = usableW / canvas.width;           // px → mm
+    const pageHpx = (ph - margin * 2) / scale;        // max canvas-px per page
+
+    paginateCanvasToPDF(pdf, canvas, cutPoints, margin, usableW, pageHpx, scale);
+
+    pdf.save(`ranking_4ano${turma}_${subject}.pdf`);
+  } catch (e) {
+    if (document.body.contains(wrap)) document.body.removeChild(wrap);
+    alert('Erro ao gerar PDF: ' + e.message);
+  }
+}
+
+/* ═══════════════════════════════ DOWNLOAD PDF RESULTADOS INDIVIDUAIS ═══════════════════════════════ */
+async function downloadIndividualPDF(turma) {
+  const arr = turma === 'A' ? resultadosA : resultadosB;
+  if (!arr.length) { alert('Importe os dados da turma antes de gerar o PDF.'); return; }
+
+  /* mesma ordenação exibida no app: por % Geral (desc) */
+  const sorted = [...arr].sort((a, b) => b.pctGeral - a.pctGeral);
+
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'position:fixed;top:0;left:-9999px;width:900px;background:#fff;font-family:Segoe UI,system-ui,sans-serif;padding:28px 28px 20px;color:#1e2a3b';
+  document.body.appendChild(wrap);
+
+  /* ── header ── */
+  const header = document.createElement('div');
+  header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;padding-bottom:14px;border-bottom:3px solid #1e40af';
+  header.innerHTML = `
+    <div>
+      <div style="font-size:1.15rem;font-weight:800;color:#1e2a3b">👥 Resultados Individuais — 4° Ano ${turma}</div>
+      <div style="font-size:.78rem;color:#6b7a99;margin-top:3px">${sorted.length} alunos · Ordenado por % Geral · ${new Date().toLocaleDateString('pt-BR')}</div>
+    </div>`;
+  wrap.appendChild(header);
+
+  /* ── tabela replicando o layout de tblIndividual (cards com pills e medalhas) ── */
+  const rowsHtml = sorted.map((a, i) => {
+    const r = i + 1;
+    let posHtml;
+    if (r === 1)      posHtml = `<span style="display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#fde047,#eab308);color:#78350f;font-weight:900;font-size:.88rem;box-shadow:0 2px 6px rgba(234,179,8,.4)">1°</span>`;
+    else if (r === 2) posHtml = `<span style="display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#e5e7eb,#9ca3af);color:#1f2937;font-weight:900;font-size:.88rem;box-shadow:0 2px 6px rgba(156,163,175,.4)">2°</span>`;
+    else if (r === 3) posHtml = `<span style="display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#fdba74,#c2410c);color:#fff;font-weight:900;font-size:.88rem;box-shadow:0 2px 6px rgba(194,65,12,.4)">3°</span>`;
+    else              posHtml = `<span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:#eef2f7;color:#475569;font-weight:800;font-size:.82rem">${r}</span>`;
+
+    const np = nivelPort(a.pctPort);
+    const nm = nivelMath(a.pctMath);
+    const cp = LEVEL_COLORS[np.label] || { bg: '#eee', fg: '#000' };
+    const cm = LEVEL_COLORS[nm.label] || { bg: '#eee', fg: '#000' };
+
+    const mkPill  = c => `display:inline-flex;flex-direction:column;align-items:center;min-width:54px;padding:.35rem .48rem;border-radius:8px;font-weight:800;font-size:.86rem;line-height:1.15;background:${c.bg};color:${c.fg}`;
+    const mkBadge = c => `display:inline-block;padding:.28rem .65rem;border-radius:6px;font-size:.68rem;font-weight:800;letter-spacing:.35px;background:${c.bg};color:${c.fg};min-width:90px;text-align:center`;
+    const small   = `font-size:.62rem;font-weight:600;opacity:.85;margin-top:.1rem`;
+    const subHdr  = `font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#6b7a99;margin-bottom:.28rem`;
+    const rowBg   = i % 2 === 0 ? '#ffffff' : '#f8fafd';
+    const cellCss = `padding:.6rem .7rem;vertical-align:middle;background:${rowBg};border-bottom:1px solid #eef2f7`;
+
+    return `<tr>
+      <td style="${cellCss};text-align:center;width:60px">${posHtml}</td>
+      <td style="${cellCss}">
+        <div style="font-weight:700;font-size:.94rem;color:#1e2a3b">${esc(nomeExib(a))}</div>
+        ${a.numero ? `<div style="font-size:.68rem;color:#6b7a99;margin-top:2px">Nº ${esc(a.numero)}</div>` : ''}
+      </td>
+      <td style="${cellCss}">
+        <div style="${subHdr}">📚 Português</div>
+        <div style="display:flex;align-items:center;gap:.45rem">
+          <span style="${mkPill(cp)}">${a.pctPort}%<span style="${small}">${a.acPort}/${PA}</span></span>
+          <span style="${mkBadge(cp)}">${np.label}</span>
+        </div>
+      </td>
+      <td style="${cellCss}">
+        <div style="${subHdr}">🔢 Matemática</div>
+        <div style="display:flex;align-items:center;gap:.45rem">
+          <span style="${mkPill(cm)}">${a.pctMath}%<span style="${small}">${a.acMath}/${PA}</span></span>
+          <span style="${mkBadge(cm)}">${nm.label}</span>
+        </div>
+      </td>
+      <td style="${cellCss};text-align:center;min-width:70px">
+        <div style="${subHdr}">Geral</div>
+        <div style="font-size:1.18rem;font-weight:900;color:#1e2a3b">${a.pctGeral}%</div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  const tblDiv = document.createElement('div');
+  tblDiv.innerHTML = `<table style="border-collapse:collapse;width:100%;font-family:Segoe UI,system-ui,sans-serif">${rowsHtml}</table>`;
+  wrap.appendChild(tblDiv);
+
+  try {
+    const canvas = await html2canvas(wrap, { scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff' });
+    const canvasScale = canvas.width / wrap.getBoundingClientRect().width;
+    const cutPoints   = collectSafeCutPoints(wrap, canvasScale);
+    document.body.removeChild(wrap);
+
+    const { jsPDF } = window.jspdf;
+    const pdf     = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const margin  = 12;
+    const pw      = pdf.internal.pageSize.getWidth();
+    const ph      = pdf.internal.pageSize.getHeight();
+    const usableW = pw - margin * 2;
+    const scale   = usableW / canvas.width;
+    const pageHpx = (ph - margin * 2) / scale;
+
+    paginateCanvasToPDF(pdf, canvas, cutPoints, margin, usableW, pageHpx, scale);
+    pdf.save(`resultados_individuais_4ano${turma}.pdf`);
+  } catch(e) {
+    if (document.body.contains(wrap)) document.body.removeChild(wrap);
+    alert('Erro ao gerar PDF: ' + e.message);
+  }
+}
+
+/* ═══════════════════════════════ DOWNLOAD PDF DESCRITORES ═══════════════════════════════ */
+async function downloadDescritoresPDF(areaKey) {
+  const arr = getFiltered(currentDescTab);
+  if (!arr.length) { alert('Importe os dados antes de gerar o PDF.'); return; }
+
+  const arrMedia  = alunosMedia(arr);   // estatísticas sem alunos PCD
+  const areaLabel = areaKey === 'Port' ? 'Língua Portuguesa' : 'Matemática';
+  const hdrColor  = areaKey === 'Port' ? '#0284c7' : '#7c3aed';
+  const turmaLabel = currentDescTab === 'ALL' ? 'Geral (A + B)' : `4° Ano ${currentDescTab}`;
+
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'position:fixed;top:0;left:-9999px;width:860px;background:#fff;font-family:Segoe UI,system-ui,sans-serif;padding:28px 28px 20px';
+  document.body.appendChild(wrap);
+
+  /* ── header ── */
+  const header = document.createElement('div');
+  header.style.cssText = `display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;padding-bottom:14px;border-bottom:3px solid ${hdrColor}`;
+  header.innerHTML = `
+    <div>
+      <div style="font-size:1.1rem;font-weight:800;color:#1e2a3b">📋 % Acerto por Descritor — ${areaLabel}</div>
+      <div style="font-size:.78rem;color:#6b7a99;margin-top:3px">${turmaLabel} · ${new Date().toLocaleDateString('pt-BR')}</div>
+    </div>`;
+  wrap.appendChild(header);
+
+  /* ── clone chart canvas ── */
+  const srcCanvas = document.getElementById('cDesc' + areaKey);
+  if (srcCanvas) {
+    const chartImg = document.createElement('img');
+    chartImg.src = srcCanvas.toDataURL('image/png');
+    chartImg.style.cssText = 'width:100%;max-height:340px;object-fit:contain;margin-bottom:18px;border:1px solid #e5e7eb;border-radius:8px;padding:8px;background:#fafbfd';
+    wrap.appendChild(chartImg);
+  }
+
+  /* ── build descriptor table ── */
+  const range = areaKey === 'Port' ? [1, PA] : [PA + 1, NQ];
+  const descs = {};
+  for (let q = range[0]; q <= range[1]; q++) {
+    const gabQ = gabarito[`q${q}`] || {};
+    const desc = gabQ.desc || 'S/D';
+    if (!descs[desc]) descs[desc] = { label: desc, questoes: [], ac: 0, total: 0 };
+    descs[desc].questoes.push(q);
+    arrMedia.forEach(a => {
+      const r = a.respostas[`q${q}`];
+      if (r) { descs[desc].total++; if (r.acertou) descs[desc].ac++; }
+    });
+  }
+  const sorted = Object.values(descs).sort((a, b) => a.label.localeCompare(b.label));
+  const pcts   = sorted.map(d => d.total ? Math.round(d.ac / d.total * 100) : 0);
+
+  const thS = (txt, align='center') => `<th style="background:#1e2a3b;color:#fff;padding:.4rem .6rem;text-align:${align};font-weight:700;font-size:.72rem;border:1px solid #374151;white-space:nowrap">${txt}</th>`;
+  let tbl = `<table style="border-collapse:collapse;font-size:.78rem;font-family:Segoe UI,system-ui,sans-serif;width:100%"><thead><tr>
+    ${thS('Descritor','left')}
+    ${thS('Questões')}
+    ${thS('Acertos')}
+    ${thS('Respostas')}
+    ${thS('% Acerto')}
+    ${thS('Desempenho')}
+  </tr></thead><tbody>`;
+
+  sorted.forEach((d, i) => {
+    const p = pcts[i];
+    const rowBg = i % 2 === 0 ? '#ffffff' : '#f8fafd';
+    const barBg = p >= 70 ? '#4ade80' : p >= 50 ? '#facc15' : '#f87171';
+    const pBg   = p >= 70 ? '#166534' : p >= 50 ? '#b45309' : '#dc2626';
+    tbl += `<tr>
+      <td style="padding:.38rem .65rem;border:1px solid #e5e7eb;background:${rowBg};font-weight:700;text-align:left">${esc(d.label)}</td>
+      <td style="padding:.38rem .55rem;border:1px solid #e5e7eb;background:${rowBg};text-align:center;color:#6b7a99">${d.questoes.join(', ')}</td>
+      <td style="padding:.38rem .55rem;border:1px solid #e5e7eb;background:${rowBg};text-align:center;font-weight:700">${d.ac}</td>
+      <td style="padding:.38rem .55rem;border:1px solid #e5e7eb;background:${rowBg};text-align:center">${d.total}</td>
+      <td style="padding:.38rem .55rem;border:1px solid #e5e7eb;background:${rowBg};text-align:center"><span style="display:inline-block;padding:.18rem .42rem;border-radius:4px;font-size:.7rem;font-weight:800;background:${pBg};color:#fff">${p}%</span></td>
+      <td style="padding:.38rem .65rem;border:1px solid #e5e7eb;background:${rowBg}">
+        <div style="background:#e5e7eb;border-radius:4px;height:10px;width:100%">
+          <div style="height:10px;border-radius:4px;background:${barBg};width:${p}%"></div>
+        </div>
+      </td>
+    </tr>`;
+  });
+  tbl += '</tbody></table>';
+
+  const tblDiv = document.createElement('div');
+  tblDiv.innerHTML = tbl;
+  wrap.appendChild(tblDiv);
+
+  try {
+    const canvas = await html2canvas(wrap, { scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff' });
+    const canvasScale = canvas.width / wrap.getBoundingClientRect().width;
+    const cutPoints   = collectSafeCutPoints(wrap, canvasScale);
+    document.body.removeChild(wrap);
+
+    const { jsPDF } = window.jspdf;
+    const pdf     = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const margin  = 12;
+    const pw      = pdf.internal.pageSize.getWidth();
+    const ph      = pdf.internal.pageSize.getHeight();
+    const usableW = pw - margin * 2;
+    const scale   = usableW / canvas.width;
+    const pageHpx = (ph - margin * 2) / scale;
+
+    paginateCanvasToPDF(pdf, canvas, cutPoints, margin, usableW, pageHpx, scale);
+    pdf.save(`descritores_${areaKey.toLowerCase()}_${currentDescTab.toLowerCase()}.pdf`);
+  } catch(e) {
+    if (document.body.contains(wrap)) document.body.removeChild(wrap);
+    alert('Erro ao gerar PDF: ' + e.message);
+  }
+}
+
+/* ═══════════════════════════════ EXPORT CSV ═══════════════════════════════ */
+function exportCSV() {
+  const all = getFiltered(currentTab);
+  if (!all.length) return;
+  downloadCSV(all, 'resultados_geral.csv');
+}
+
+function exportCSVTurma(turma) {
+  const arr = turma === 'A' ? resultadosA : resultadosB;
+  if (!arr.length) return;
+  downloadCSV(arr, `resultados_5${turma.toLowerCase()}.csv`);
+}
+
+function downloadCSV(arr, filename) {
+  let csv = 'Número,Nome,Turma,Acertos Port.,% Port.,Nível Port.,Acertos Mat.,% Mat.,Nível Mat.,% Geral,PCD (fora da média)\n';
+  arr.sort((a,b)=>b.pctGeral-a.pctGeral).forEach(a => {
+    const np = nivelPort(a.pctPort).label;
+    const nm = nivelMath(a.pctMath).label;
+    csv += `"${a.numero}","${nomeExib(a)}","4°${a.turma}",${a.acPort},${a.pctPort}%,"${np}",${a.acMath},${a.pctMath}%,"${nm}",${a.pctGeral}%,"${isPcd(a) ? 'Sim' : ''}"\n`;
+  });
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
+}
+
+/* ═══════════════════════════════ PCD (observações) ═══════════════════════════════
+   Um aluno com observação preenchida é tratado como PCD:
+   • o resultado continua sendo divulgado;
+   • o NOME aparece somente no Gabarito Visual (nas outras telas fica anônimo);
+   • a nota NÃO entra no cálculo das médias/estatísticas da turma.            */
+function pcdKey(a) { return `${String(a.numero||'').trim()}|${String(a.nome||'').trim()}`; }
+function getObsPcd(a) {
+  const m = obsPcd[a.turma] || {};
+  return (m[pcdKey(a)] || '').trim();
+}
+function isPcd(a) { return getObsPcd(a) !== ''; }
+/* alunos considerados no cálculo das médias (exclui PCD) */
+function alunosMedia(arr) { return arr.filter(a => !isPcd(a)); }
+/* nome exibido fora do Gabarito Visual */
+function nomeExib(a) {
+  if (!isPcd(a)) return a.nome;
+  return 'Aluno(a) PCD' + (a.numero ? ' — Nº ' + String(a.numero).trim() : '');
+}
+function persistObsPcd() {
+  localStorage.setItem(K('obsPcd'), JSON.stringify(obsPcd));
+  if (db) db.ref(FB('obsPcd')).set(obsPcd).catch(() => {});
+}
+function renderPcdPanel(turma) {
+  const arr = turma === 'A' ? resultadosA : resultadosB;
+  const el  = document.getElementById('pcd-' + turma.toLowerCase());
+  if (!el) return;
+  if (!arr.length) { el.innerHTML = '<p class="muted tc" style="padding:1.5rem">Sem dados.</p>'; return; }
+  const sorted = [...arr].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  let h = `<div class="alert a-info">🧩 Escreva uma observação para os alunos PCD. Quem tiver observação continua com o <strong>resultado divulgado</strong>, mas o <strong>nome aparece apenas no Gabarito Visual</strong> e a nota <strong>não entra no cálculo da média da turma</strong>. Deixe em branco para remover.</div>
+  <div class="tbl-wrap"><table><thead><tr><th>Nº</th><th>Nome</th><th>Observação (PCD)</th></tr></thead><tbody>`;
+  sorted.forEach(a => {
+    h += `<tr>
+      <td class="muted">${esc(a.numero)}</td>
+      <td><strong>${esc(a.nome)}</strong>${isPcd(a) ? ' <span class="tag tag-b">PCD</span>' : ''}</td>
+      <td><input type="text" class="pcd-input" data-key="${esc(pcdKey(a))}" value="${esc(getObsPcd(a))}" placeholder="Ex.: aluno PCD — laudo TEA, avaliação adaptada" /></td>
+    </tr>`;
+  });
+  h += `</tbody></table></div>
+  <div class="btns mt2"><button class="btn btn-success btn-sm" onclick="saveObsPcd('${turma}')">💾 Salvar observações</button></div>`;
+  el.innerHTML = h;
+}
+function saveObsPcd(turma) {
+  const el = document.getElementById('pcd-' + turma.toLowerCase());
+  if (!el) return;
+  const map = {};
+  el.querySelectorAll('.pcd-input').forEach(inp => {
+    const v = inp.value.trim();
+    if (v) map[inp.dataset.key] = v;
+  });
+  obsPcd[turma] = map;
+  persistObsPcd();
+  const n = Object.keys(map).length;
+  msg('pcd-msg-' + turma.toLowerCase(), `✅ Observações salvas. ${n} aluno(s) marcados como PCD — nome oculto fora do Gabarito Visual e nota fora das médias.`, 'a-ok');
+  renderTurmaPage(turma);
+  renderDashboard();
+  renderDescritores();
+  showSubTab(turma, 'pcd');
+}
+
+/* ═══════════════════════════════ NÍVEIS ═══════════════════════════════ */
+function nivelPort(p) {
+  if (p >= 85) return { label: 'ADEQUADO',      bg: '#dcfce7', color: '#166534' };
+  if (p >= 60) return { label: 'INTERMEDIÁRIO', bg: '#dbeafe', color: '#1e40af' };
+  if (p >= 40) return { label: 'CRÍTICO',       bg: '#fef9c3', color: '#854d0e' };
+  return              { label: 'MUITO CRÍTICO', bg: '#fee2e2', color: '#991b1b' };
+}
+function nivelMath(p) {
+  if (p >= 80) return { label: 'ADEQUADO',      bg: '#dcfce7', color: '#166534' };
+  if (p >= 56) return { label: 'INTERMEDIÁRIO', bg: '#dbeafe', color: '#1e40af' };
+  if (p >= 35) return { label: 'CRÍTICO',       bg: '#fef9c3', color: '#854d0e' };
+  return              { label: 'MUITO CRÍTICO', bg: '#fee2e2', color: '#991b1b' };
+}
+function nvBadge(nv) {
+  return `<span style="display:inline-block;padding:.18rem .55rem;border-radius:5px;font-size:.7rem;font-weight:700;background:${nv.bg};color:${nv.color}">${nv.label}</span>`;
+}
+
+/* ═══════════════════════════════ HELPERS ═══════════════════════════════ */
+function gv(id) { return (document.getElementById(id)?.value||'').trim(); }
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function pct(a,b) { return b ? Math.round(a/b*100) : 0; }
+
+function msg(id, text, cls) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = `<div class="alert ${cls}">${text}</div>`;
+  if (!text.includes('spinner')) setTimeout(() => el.innerHTML='', 7000);
+}
+
+function mkChart(id, type, data, options) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+  charts[id] = new Chart(document.getElementById(id), {type, data, options});
+}
+
+function ensureGabarito() {
+  if (Object.keys(gabarito).length) return;
+  const local = localStorage.getItem(K('gabarito'));
+  if (local) gabarito = JSON.parse(local);
+}
+
+
+/* ═══════════════════════════════ TEXTOS DEPENDENTES DO MODO ═══════════════════════════════ */
+function applyModeLabels() {
+  const root = document.querySelector('.legacy-app');
+  if (!root) return;
+  root.querySelectorAll('[data-mode-text]').forEach(el => {
+    el.textContent = el.dataset.modeText
+      .replace(/{{NQ}}/g, String(NQ))
+      .replace(/{{PA}}/g, String(PA))
+      .replace(/{{PA1}}/g, String(PA + 1));
+  });
+}
+
+/* ═══════════════════════════════ INIT ═══════════════════════════════ */
+function initLegacyApp(modeId) {
+  const mode = MODES[modeId] || MODES['44'];
+  MODE_ID = mode.id;
+  NQ = mode.nq;
+  PA = mode.perArea;
+
+  /* estado limpo a cada troca de modo */
+  gabarito = {};
+  resultadosA = [];
+  resultadosB = [];
+  obsPcd = { A: {}, B: {} };
+  Object.keys(charts).forEach(id => { try { charts[id].destroy(); } catch (e) {} delete charts[id]; });
+
+  applyModeLabels();
+  navBound = false;
+  bindNav();
+  buildGabaritoGrid();
+
+  const lg = localStorage.getItem(K('gabarito'));
+  if (lg) { try { gabarito = JSON.parse(lg); fillGabaritoForm(gabarito); } catch (e) {} }
+
+  const la = localStorage.getItem(K('resultadosA'));
+  const lb = localStorage.getItem(K('resultadosB'));
+  if (la) { try { resultadosA = JSON.parse(la); } catch (e) {} }
+  if (lb) { try { resultadosB = JSON.parse(lb); } catch (e) {} }
+
+  const lo = localStorage.getItem(K('obsPcd'));
+  if (lo) { try { obsPcd = Object.assign({ A: {}, B: {} }, JSON.parse(lo)); } catch (e) {} }
+
+  connectFirebase();
+
+  if (db) {
+    db.ref(FB('obsPcd')).get().then(snap => {
+      if (snap.exists()) {
+        obsPcd = Object.assign({ A: {}, B: {} }, snap.val());
+        localStorage.setItem(K('obsPcd'), JSON.stringify(obsPcd));
+        rerenderCurrent();
+      }
+    }).catch(() => {});
+    ['A', 'B'].forEach(t => {
+      db.ref(FB('resultados' + t)).get().then(snap => {
+        if (!snap.exists()) return;
+        const arr = snap.val() || [];
+        if (t === 'A') resultadosA = arr; else resultadosB = arr;
+        localStorage.setItem(K('resultados' + t), JSON.stringify(arr));
+        updateImportBadges();
+        rerenderCurrent();
+      }).catch(() => {});
+    });
+    db.ref(FB('gabarito')).get().then(snap => {
+      if (!snap.exists()) return;
+      gabarito = snap.val();
+      fillGabaritoForm(gabarito);
+      localStorage.setItem(K('gabarito'), JSON.stringify(gabarito));
+      rerenderCurrent();
+    }).catch(() => {});
+  }
+
+  updateImportBadges();
+  selectTurmaImport('A');
+  showTab('gabarito');
+  exposeGlobals();
+}
+
+function rerenderCurrent() {
+  const active = document.querySelector('.legacy-app nav button.active');
+  const t = active ? active.dataset.tab : 'gabarito';
+  if (t === 'dashboard') renderDashboard();
+  if (t === 'turmaA') renderTurmaPage('A');
+  if (t === 'turmaB') renderTurmaPage('B');
+  if (t === 'descritores') renderDescritores();
+}
+
+function showTab(tab) {
+  const root = document.querySelector('.legacy-app');
+  if (!root) return;
+  root.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  root.querySelectorAll('.section').forEach(s => s.classList.toggle('active', s.id === 'sec-' + tab));
+  if (tab === 'dashboard') renderDashboard();
+  if (tab === 'turmaA') renderTurmaPage('A');
+  if (tab === 'turmaB') renderTurmaPage('B');
+  if (tab === 'descritores') renderDescritores();
+}
+
+/* funções chamadas por atributos onclick da marcação original */
+function exposeGlobals() {
+  Object.assign(window, {
+    saveGabarito, loadGabaritoFromStorage, clearTurma, selectTurmaImport, handleFile,
+    showSubTab, setDescTab, saveObsPcd, exportCSV, exportCSVTurma,
+    downloadRankingPDF, downloadIndividualPDF, downloadGabaritoVisualPDF, downloadDescritoresPDF,
+  });
+}
+
+/* ═══════════════ BOOT (arquivo único) ═══════════════ */
+const jsPDF = window.jspdf.jsPDF;
+const MODE_LIST = [MODES['30'], MODES['44']];
+const MARKUP = document.getElementById('legacy-markup').textContent;
+
+function renderMarkup(mode) {
+  return MARKUP.replace(/\{\{NQ\}\}/g, String(mode.nq))
+    .replace(/\{\{PA1\}\}/g, String(mode.perArea + 1))
+    .replace(/\{\{PA\}\}/g, String(mode.perArea));
+}
+
+function selectMode(id) {
+  const mode = MODES[id] || MODES['44'];
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode.id));
+  document.getElementById('app-root').innerHTML = renderMarkup(mode);
+  initLegacyApp(mode.id);
+}
+
+document.querySelectorAll('.mode-btn').forEach(b => b.addEventListener('click', () => selectMode(b.dataset.mode)));
+selectMode('44');
+
+</script>
+</body>
+</html>
